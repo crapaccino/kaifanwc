@@ -1,0 +1,88 @@
+-- Run this once in Supabase SQL Editor.
+create table if not exists players (
+  id uuid primary key default gen_random_uuid(),
+  nickname text not null unique,
+  created_at timestamptz default now()
+);
+
+create table if not exists matches (
+  id text primary key,
+  round text not null,
+  group_name text,
+  home text not null,
+  away text not null,
+  kickoff timestamptz not null,
+  home_score int,
+  away_score int,
+  is_active boolean default true,
+  created_at timestamptz default now()
+);
+
+create table if not exists predictions (
+  id uuid primary key default gen_random_uuid(),
+  player_id uuid references players(id) on delete cascade,
+  match_id text references matches(id) on delete cascade,
+  predicted_winner text not null check (predicted_winner in ('home','draw','away')),
+  home_score int,
+  away_score int,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique(player_id, match_id)
+);
+
+insert into matches (id, round, group_name, home, away, kickoff)
+values
+  ('66456910','Group Stage - Round 2','A','Czechia','South Africa','2026-06-18T16:00:00Z'),
+  ('66456922','Group Stage - Round 2','B','Switzerland','Bosnia and Herzegovina','2026-06-18T19:00:00Z'),
+  ('66456920','Group Stage - Round 2','B','Canada','Qatar','2026-06-18T22:00:00Z'),
+  ('66456908','Group Stage - Round 2','A','Mexico','South Korea','2026-06-19T01:00:00Z'),
+  ('66456944','Group Stage - Round 2','D','United States','Australia','2026-06-19T19:00:00Z'),
+  ('66456934','Group Stage - Round 2','C','Scotland','Morocco','2026-06-19T22:00:00Z'),
+  ('66456932','Group Stage - Round 2','C','Brazil','Haiti','2026-06-20T00:30:00Z'),
+  ('66456946','Group Stage - Round 2','D','Turkey','Paraguay','2026-06-20T03:00:00Z'),
+  ('66456972','Group Stage - Round 2','F','Netherlands','Sweden','2026-06-20T17:00:00Z'),
+  ('66457074','Group Stage - Round 2','E','Germany','Ivory Coast','2026-06-20T20:00:00Z'),
+  ('66457076','Group Stage - Round 2','E','Ecuador','Curacao','2026-06-21T00:00:00Z'),
+  ('66456974','Group Stage - Round 2','F','Tunisia','Japan','2026-06-21T04:00:00Z'),
+  ('66456998','Group Stage - Round 2','H','Spain','Saudi Arabia','2026-06-21T16:00:00Z'),
+  ('66456986','Group Stage - Round 2','G','Belgium','Iran','2026-06-21T19:00:00Z'),
+  ('66457000','Group Stage - Round 2','H','Uruguay','Cape Verde','2026-06-21T22:00:00Z'),
+  ('66456988','Group Stage - Round 2','G','New Zealand','Egypt','2026-06-22T01:00:00Z'),
+  ('66457022','Group Stage - Round 2','J','Argentina','Austria','2026-06-22T17:00:00Z'),
+  ('66457010','Group Stage - Round 2','I','France','Iraq','2026-06-22T21:00:00Z'),
+  ('66457012','Group Stage - Round 2','I','Norway','Senegal','2026-06-23T00:00:00Z'),
+  ('66457024','Group Stage - Round 2','J','Jordan','Algeria','2026-06-23T03:00:00Z'),
+  ('66457034','Group Stage - Round 2','K','Portugal','Uzbekistan','2026-06-23T17:00:00Z'),
+  ('66457046','Group Stage - Round 2','L','England','Ghana','2026-06-23T20:00:00Z'),
+  ('66457048','Group Stage - Round 2','L','Panama','Croatia','2026-06-23T23:00:00Z'),
+  ('66457036','Group Stage - Round 2','K','Colombia','DR Congo','2026-06-24T02:00:00Z'),
+  ('66456924','Group Stage - Round 3','B','Switzerland','Canada','2026-06-24T19:00:00Z'),
+  ('66456926','Group Stage - Round 3','B','Bosnia and Herzegovina','Qatar','2026-06-24T19:00:00Z'),
+  ('66456936','Group Stage - Round 3','C','Scotland','Brazil','2026-06-24T22:00:00Z'),
+  ('66456938','Group Stage - Round 3','C','Morocco','Haiti','2026-06-24T22:00:00Z'),
+  ('66456912','Group Stage - Round 3','A','Czechia','Mexico','2026-06-25T01:00:00Z'),
+  ('66456914','Group Stage - Round 3','A','South Africa','South Korea','2026-06-25T01:00:00Z'),
+  ('66457078','Group Stage - Round 3','E','Ecuador','Germany','2026-06-25T20:00:00Z'),
+  ('66457080','Group Stage - Round 3','E','Curacao','Ivory Coast','2026-06-25T20:00:00Z'),
+  ('66456976','Group Stage - Round 3','F','Tunisia','Netherlands','2026-06-25T23:00:00Z'),
+  ('66456978','Group Stage - Round 3','F','Japan','Sweden','2026-06-25T23:00:00Z'),
+  ('66456948','Group Stage - Round 3','D','Turkey','United States','2026-06-26T02:00:00Z'),
+  ('66456950','Group Stage - Round 3','D','Paraguay','Australia','2026-06-26T02:00:00Z'),
+  ('66457014','Group Stage - Round 3','I','Norway','France','2026-06-26T19:00:00Z'),
+  ('66457016','Group Stage - Round 3','I','Senegal','Iraq','2026-06-26T19:00:00Z'),
+  ('66457002','Group Stage - Round 3','H','Uruguay','Spain','2026-06-27T00:00:00Z'),
+  ('66457004','Group Stage - Round 3','H','Cape Verde','Saudi Arabia','2026-06-27T00:00:00Z'),
+  ('66456990','Group Stage - Round 3','G','New Zealand','Belgium','2026-06-27T03:00:00Z'),
+  ('66456992','Group Stage - Round 3','G','Egypt','Iran','2026-06-27T03:00:00Z'),
+  ('66457050','Group Stage - Round 3','L','Panama','England','2026-06-27T21:00:00Z'),
+  ('66457052','Group Stage - Round 3','L','Croatia','Ghana','2026-06-27T21:00:00Z'),
+  ('66457038','Group Stage - Round 3','K','Colombia','Portugal','2026-06-27T23:30:00Z'),
+  ('66457040','Group Stage - Round 3','K','DR Congo','Uzbekistan','2026-06-27T23:30:00Z'),
+  ('66457026','Group Stage - Round 3','J','Jordan','Argentina','2026-06-28T02:00:00Z'),
+  ('66457028','Group Stage - Round 3','J','Algeria','Austria','2026-06-28T02:00:00Z')
+on conflict (id) do update set
+  round = excluded.round,
+  group_name = excluded.group_name,
+  home = excluded.home,
+  away = excluded.away,
+  kickoff = excluded.kickoff;
