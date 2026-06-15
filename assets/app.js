@@ -3,6 +3,7 @@ let picks={};
 let activeTab=null;
 let nicknameLoadTimer=null;
 let lastLoadedNickname='';
+let savedMatchIds=new Set();
 
 const $=s=>document.querySelector(s);
 
@@ -34,6 +35,7 @@ const SHORT_NAMES={
 
 function flag(team){return FLAGS[team] || "🏳️";}
 function teamName(team){return SHORT_NAMES[team] || team;}
+function normalizeNickname(value){return String(value||'').trim().replace(/\s+/g,' ').toLowerCase();}
 
 const fmtTime=d=>new Intl.DateTimeFormat("en-GB",{
   timeZone:"Asia/Kuwait",
@@ -82,9 +84,17 @@ function roundLockTime(round){
   return new Date(games[0].kickoff);
 }
 
-function isRoundLocked(round){
+function isRoundTimeLocked(round){
   const lock=roundLockTime(round);
   return lock ? Date.now() >= lock.getTime() : false;
+}
+
+function hasLockedRound(round){
+  return roundMatches(round).some(m=>savedMatchIds.has(String(m.id)));
+}
+
+function isRoundLocked(round){
+  return isRoundTimeLocked(round) || hasLockedRound(round);
 }
 
 function renderTabs(active){
@@ -143,7 +153,7 @@ function teamBlock(team, side){
   `;
 }
 
-function renderMatch(m, roundLocked){
+function renderMatch(m, locked){
   const p=picks[m.id]||{};
   const hasResult=m.home_score!=null && m.away_score!=null;
 
@@ -156,13 +166,13 @@ function renderMatch(m, roundLocked){
     ['draw','Draw'],
     ['away',`${flag(m.away)} ${teamName(m.away)}`]
   ].map(([v,label])=>`
-    <button class="${p.predicted_winner===v?'active':''}" ${roundLocked?'disabled':''} data-pick="${m.id}:${v}">
+    <button class="${p.predicted_winner===v?'active':''}" ${locked?'disabled':''} data-pick="${m.id}:${v}">
       ${label}
     </button>
   `).join('');
 
   return `
-    <div class="match ${roundLocked?'locked':''}">
+    <div class="match ${locked?'locked':''}">
       <div class="match-top">
         ${teamBlock(m.home,"home")}
         ${result}
@@ -170,7 +180,7 @@ function renderMatch(m, roundLocked){
       </div>
 
       <div class="meta-row">
-        <span class="pill">${roundLocked?'ROUND LOCKED':'OPEN'}</span>
+        <span class="pill">${locked?'LOCKED':'OPEN'}</span>
         <span>Group ${m.group_name||""}</span>
         <span>${fmtTime(m.kickoff)} Kuwait</span>
       </div>
@@ -178,9 +188,9 @@ function renderMatch(m, roundLocked){
       <div class="pick">${opts}</div>
 
       <div class="score">
-        <input type="number" min="0" max="20" placeholder="${teamName(m.home)}" value="${p.home_score??''}" ${roundLocked?'disabled':''} data-score="${m.id}:home">
+        <input type="number" min="0" max="20" placeholder="${teamName(m.home)}" value="${p.home_score??''}" ${locked?'disabled':''} data-score="${m.id}:home">
         <span class="score-dash">-</span>
-        <input type="number" min="0" max="20" placeholder="${teamName(m.away)}" value="${p.away_score??''}" ${roundLocked?'disabled':''} data-score="${m.id}:away">
+        <input type="number" min="0" max="20" placeholder="${teamName(m.away)}" value="${p.away_score??''}" ${locked?'disabled':''} data-score="${m.id}:away">
       </div>
     </div>
   `;
@@ -188,11 +198,16 @@ function renderMatch(m, roundLocked){
 
 function renderMatches(active=roundNames()[0]){
   renderTabs(active);
-  $('#submitBtn').style.display='block';
 
   const matches=roundMatches(active);
   const lockTime=roundLockTime(active);
-  const roundLocked=isRoundLocked(active);
+  const timeLocked=isRoundTimeLocked(active);
+  const submittedLocked=hasLockedRound(active);
+  const locked=timeLocked || submittedLocked;
+
+  $('#submitBtn').style.display='block';
+  $('#submitBtn').disabled=locked;
+  $('#submitBtn').textContent=submittedLocked?'Picks locked':'Lock in picks';
 
   const grouped={};
   matches.forEach(m=>{
@@ -202,17 +217,19 @@ function renderMatches(active=roundNames()[0]){
   });
 
   const lockNotice=lockTime ? `
-    <div class="round-lock ${roundLocked?'locked-notice':'open-notice'}">
-      ${roundLocked
-        ? `🔒 This round is locked. Picks closed at ${fmtFull(lockTime)} Kuwait time.`
-        : `⏳ This full round locks at ${fmtFull(lockTime)} Kuwait time, before the first game starts.`
+    <div class="round-lock ${locked?'locked-notice':'open-notice'}">
+      ${submittedLocked
+        ? `✅ Your picks for this round are locked in and final.`
+        : timeLocked
+          ? `🔒 This round is locked. Picks closed at ${fmtFull(lockTime)} Kuwait time.`
+          : `⏳ Predict every match in this round. Picks become final when you press Lock in picks. Deadline: ${fmtFull(lockTime)} Kuwait time.`
       }
     </div>
   ` : '';
 
   const html=lockNotice + Object.entries(grouped).map(([day,games])=>`
     <div class="day-header">${day}</div>
-    ${games.map(m=>renderMatch(m,roundLocked)).join('')}
+    ${games.map(m=>renderMatch(m,locked)).join('')}
   `).join('');
 
   $('#matches').innerHTML=html||'<div class="notice">No matches in this round.</div>';
@@ -247,10 +264,11 @@ async function load(){
 }
 
 async function loadSavedPicksForNickname(showStatus=false){
-  const nickname=$('#nickname').value.trim();
+  const nickname=normalizeNickname($('#nickname').value);
 
   if(!nickname){
     picks={};
+    savedMatchIds=new Set();
     lastLoadedNickname='';
     renderView(activeTab || roundNames()[0]);
     $('#status').textContent='';
@@ -264,11 +282,15 @@ async function loadSavedPicksForNickname(showStatus=false){
 
     const j=await api('get-player?nickname='+encodeURIComponent(nickname));
     picks={};
+    savedMatchIds=new Set();
 
-    (j.predictions||[]).forEach(p=>picks[p.match_id]={
-      predicted_winner:p.predicted_winner,
-      home_score:p.home_score,
-      away_score:p.away_score
+    (j.predictions||[]).forEach(p=>{
+      picks[p.match_id]={
+        predicted_winner:p.predicted_winner,
+        home_score:p.home_score,
+        away_score:p.away_score
+      };
+      savedMatchIds.add(String(p.match_id));
     });
 
     lastLoadedNickname=nickname;
@@ -296,24 +318,40 @@ $('#nickname').addEventListener('blur',()=>{
 
 $('#submitBtn').onclick=async()=>{
   try{
-    const nickname=$('#nickname').value.trim();
+    const nickname=normalizeNickname($('#nickname').value);
+    if(!nickname) throw new Error('Enter your nickname first.');
+    if(!activeTab || activeTab==='leaderboard') throw new Error('Choose a round first.');
+    if(hasLockedRound(activeTab)) throw new Error('You have already locked in this round.');
+    if(isRoundTimeLocked(activeTab)) throw new Error('This round is already locked.');
 
-    const predictions=Object.entries(picks)
-      .filter(([_,p])=>p.predicted_winner)
-      .map(([match_id,p])=>({
-        match_id,
+    const currentMatches=roundMatches(activeTab);
+    const missing=currentMatches.find(m=>{
+      const p=picks[m.id]||{};
+      return !p.predicted_winner || !Number.isInteger(p.home_score) || !Number.isInteger(p.away_score);
+    });
+
+    if(missing){
+      throw new Error('Please predict the winner/draw and both scores for every match in this round before locking in.');
+    }
+
+    const predictions=currentMatches.map(m=>{
+      const p=picks[m.id];
+      return {
+        match_id:m.id,
         predicted_winner:p.predicted_winner,
-        home_score:Number.isInteger(p.home_score)?p.home_score:null,
-        away_score:Number.isInteger(p.away_score)?p.away_score:null
-      }));
+        home_score:p.home_score,
+        away_score:p.away_score
+      };
+    });
 
     const j=await api('submit-predictions',{
       method:'POST',
       body:JSON.stringify({nickname,predictions})
     });
 
+    predictions.forEach(p=>savedMatchIds.add(String(p.match_id)));
     lastLoadedNickname=nickname;
-    $('#status').innerHTML=`<span class="ok">Locked in ${j.saved} picks.</span>`;
+    $('#status').innerHTML=`<span class="ok">Locked in ${j.saved} picks. These picks are now final.</span>`;
     await load();
   }catch(e){
     $('#status').innerHTML=`<span class="bad">${e.message}</span>`;
