@@ -1,6 +1,8 @@
 let state={matches:[],leaderboard:[]};
 let picks={};
 let activeTab=null;
+let nicknameLoadTimer=null;
+let lastLoadedNickname='';
 
 const $=s=>document.querySelector(s);
 
@@ -130,7 +132,6 @@ function renderLeaderboardView(){
   `;
 
   $('#submitBtn').style.display='none';
-  $('#loadBtn').style.display='none';
 }
 
 function teamBlock(team, side){
@@ -188,7 +189,6 @@ function renderMatch(m, roundLocked){
 function renderMatches(active=roundNames()[0]){
   renderTabs(active);
   $('#submitBtn').style.display='block';
-  $('#loadBtn').style.display='block';
 
   const matches=roundMatches(active);
   const lockTime=roundLockTime(active);
@@ -246,22 +246,53 @@ async function load(){
   $('#status').textContent='';
 }
 
-$('#loadBtn').onclick=async()=>{
+async function loadSavedPicksForNickname(showStatus=false){
   const nickname=$('#nickname').value.trim();
-  if(!nickname)return $('#status').textContent='Enter your nickname first.';
 
-  const j=await api('get-player?nickname='+encodeURIComponent(nickname));
-  picks={};
+  if(!nickname){
+    picks={};
+    lastLoadedNickname='';
+    renderView(activeTab || roundNames()[0]);
+    $('#status').textContent='';
+    return;
+  }
 
-  (j.predictions||[]).forEach(p=>picks[p.match_id]={
-    predicted_winner:p.predicted_winner,
-    home_score:p.home_score,
-    away_score:p.away_score
-  });
+  if(nickname===lastLoadedNickname) return;
 
-  renderView(activeTab || roundNames()[0]);
-  $('#status').textContent=j.player?'Loaded your previous picks.':'No saved picks for this nickname yet.';
-};
+  try{
+    if(showStatus) $('#status').textContent='Loading saved picks...';
+
+    const j=await api('get-player?nickname='+encodeURIComponent(nickname));
+    picks={};
+
+    (j.predictions||[]).forEach(p=>picks[p.match_id]={
+      predicted_winner:p.predicted_winner,
+      home_score:p.home_score,
+      away_score:p.away_score
+    });
+
+    lastLoadedNickname=nickname;
+    renderView(activeTab || roundNames()[0]);
+
+    if(showStatus){
+      $('#status').textContent=j.player?'Loaded your saved picks.':'No saved picks for this nickname yet.';
+    }else if(j.player){
+      $('#status').textContent='Loaded your saved picks.';
+    }
+  }catch(e){
+    $('#status').innerHTML=`<span class="bad">${e.message}</span>`;
+  }
+}
+
+$('#nickname').addEventListener('input',()=>{
+  clearTimeout(nicknameLoadTimer);
+  nicknameLoadTimer=setTimeout(()=>loadSavedPicksForNickname(false),650);
+});
+
+$('#nickname').addEventListener('blur',()=>{
+  clearTimeout(nicknameLoadTimer);
+  loadSavedPicksForNickname(true);
+});
 
 $('#submitBtn').onclick=async()=>{
   try{
@@ -281,6 +312,7 @@ $('#submitBtn').onclick=async()=>{
       body:JSON.stringify({nickname,predictions})
     });
 
+    lastLoadedNickname=nickname;
     $('#status').innerHTML=`<span class="ok">Locked in ${j.saved} picks.</span>`;
     await load();
   }catch(e){
