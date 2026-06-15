@@ -29,7 +29,7 @@ button.secondary{background:#eaf0ff;color:var(--accent);}
 button.danger{background:#b42318;}
 .small{font-size:13px;color:var(--muted);}
 .tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 10px;}
-.tabs button{background:#fff;color:var(--accent);border:1px solid var(--line);}
+.tabs button{background:#fff;color:var(--accent);border:1px solid var(--line);font-size:14px;}
 .tabs button.active{background:var(--accent);color:#fff;}
 
 .day-header{
@@ -116,11 +116,64 @@ button.danger{background:#b42318;}
 .ok{color:var(--good)}
 .bad{color:var(--bad)}
 
+.round-lock{
+  margin:14px 0 18px;
+  padding:13px 14px;
+  border-radius:16px;
+  font-size:14px;
+  line-height:1.35;
+  font-weight:700;
+}
+
+.open-notice{
+  background:#eef3ff;
+  color:#102a8c;
+  border:1px solid #d9e4ff;
+}
+
+.locked-notice{
+  background:#fff1f0;
+  color:#b42318;
+  border:1px solid #ffd6d2;
+}
+
+.leaderboard-tab{
+  margin-top:16px;
+}
+
+.action-bar{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+  margin:22px 0 6px;
+}
+
+#submitBtn{
+  min-height:56px;
+  font-size:17px;
+  border-radius:16px;
+}
+
+#loadBtn{
+  min-height:48px;
+  border-radius:16px;
+}
+
 @media(max-width:600px){
   .match{padding:14px;}
   .team-name{font-size:16px;max-width:100px;}
   .result-score{font-size:26px;min-width:70px;}
   .team-flag{font-size:22px;}
+}
+
+@media(min-width:700px){
+  .tabs{
+    grid-template-columns:repeat(3,1fr);
+  }
+
+  .action-bar{
+    grid-template-columns:1fr 1fr;
+  }
 }
 
 @media(min-width:900px){
@@ -129,6 +182,7 @@ button.danger{background:#b42318;}
   .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:start;}
   .leaderboard{position:sticky;top:20px;}
   .pick{grid-template-columns:1fr 1fr 1fr;}
-  .team-name{font-size:24px;}
+  .team-name{font-size:24px;max-width:190px;}
   .result-score{font-size:40px;}
+  .tabs{grid-template-columns:repeat(4,1fr);}
 }
