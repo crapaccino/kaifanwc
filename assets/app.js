@@ -18,11 +18,7 @@ const FLAGS={
   "England":"🏴","Croatia":"🇭🇷","Ghana":"🇬🇭","Panama":"🇵🇦"
 };
 
-function flag(team){
-  const code = FLAGS[team];
-  if(!code) return "";
-  return `<img class="flag-img" src="https://flagcdn.com/48x36/${code.toLowerCase()}.png" alt="${team}">`;
-}
+function flag(team){return FLAGS[team] || "🏳️";}
 
 const fmtTime=d=>new Intl.DateTimeFormat("en-GB",{
   timeZone:"Asia/Kuwait",
