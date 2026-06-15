@@ -7,18 +7,29 @@
   <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
-  <header>
-    <h1>World Cup Predictor</h1>
-    <p>Predict the full round before the first game of that round kicks off. Correct winner/draw = 3 points. Exact score bonus = +2.</p>
-  </header>
-
   <main class="wrap">
-    <section class="card">
-      <h2>Make predictions</h2>
-
-      <div class="row">
-        <input id="nickname" placeholder="Your nickname">
+    <section id="welcomeScreen" class="welcome-screen">
+      <div class="welcome-card">
+        <div class="welcome-logo">🏆</div>
+        <p class="welcome-kicker">KAIFAN</p>
+        <h1>World Cup Predictor</h1>
+        <p class="welcome-copy">Enter your name to start predicting and climb the leaderboard.</p>
+        <input id="welcomeName" placeholder="Your name" autocomplete="name">
+        <button id="continueBtn">Continue</button>
+        <p class="welcome-note">🔒 Once you lock in picks, your name and picks are final for that round.</p>
+        <p class="small" id="welcomeStatus"></p>
       </div>
+    </section>
+
+    <section id="appScreen" class="card app-hidden">
+      <header class="app-header">
+        <div>
+          <p class="welcome-kicker">KAIFAN WC</p>
+          <h1>World Cup Predictor</h1>
+          <p id="playerLabel" class="player-label"></p>
+        </div>
+        <button id="changeNameBtn" class="secondary change-name-btn">Change name</button>
+      </header>
 
       <div class="tabs" id="roundTabs"></div>
       <div id="matches"></div>
