@@ -1,81 +1,133 @@
 const { client, json } = require('./_supabase');
 
+function normalizeNickname(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function isValidScore(value) {
+  return Number.isInteger(value) && value >= 0 && value <= 20;
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: 'POST only' });
 
   try {
     const body = JSON.parse(event.body || '{}');
-    const nickname = String(body.nickname || '').trim().slice(0, 40);
+    const nickname = normalizeNickname(body.nickname);
     const predictions = Array.isArray(body.predictions) ? body.predictions : [];
 
     if (!nickname) return json(400, { error: 'Enter a nickname' });
     if (!predictions.length) return json(400, { error: 'No predictions selected' });
 
     const sb = client();
-    const ids = predictions.map(p => p.match_id);
+    const ids = [...new Set(predictions.map(p => p.match_id).filter(Boolean))];
 
-    const { data: matches, error: mErr } = await sb
+    const { data: selectedMatches, error: mErr } = await sb
       .from('matches')
       .select('id,round,kickoff')
-      .in('id', ids);
+      .in('id', ids)
+      .eq('is_active', true);
 
     if (mErr) throw mErr;
+    if (!selectedMatches || selectedMatches.length !== ids.length) {
+      return json(400, { error: 'One or more selected matches could not be found.' });
+    }
 
-    const matchMap = Object.fromEntries(matches.map(m => [m.id, m]));
-    const now = Date.now();
-    const rounds = [...new Set(matches.map(m => m.round))];
+    const rounds = [...new Set(selectedMatches.map(m => m.round))];
+    if (rounds.length !== 1) {
+      return json(400, { error: 'Please lock in one round at a time.' });
+    }
+
+    const round = rounds[0];
 
     const { data: roundMatches, error: rErr } = await sb
       .from('matches')
-      .select('round,kickoff')
-      .in('round', rounds)
+      .select('id,round,kickoff')
+      .eq('round', round)
       .eq('is_active', true)
       .order('kickoff', { ascending: true });
 
     if (rErr) throw rErr;
 
-    const roundLock = {};
-    for (const m of roundMatches) {
-      if (!roundLock[m.round]) roundLock[m.round] = new Date(m.kickoff).getTime();
-    }
+    const roundIds = roundMatches.map(m => String(m.id));
+    const submittedIds = new Set(ids.map(String));
+    const firstKickoff = roundMatches[0] ? new Date(roundMatches[0].kickoff).getTime() : null;
 
-    const blocked = predictions.find(p => {
-      const match = matchMap[p.match_id];
-      if (!match) return true;
-      const lockTime = roundLock[match.round];
-      return lockTime && now >= lockTime;
-    });
-
-    if (blocked) {
+    if (firstKickoff && Date.now() >= firstKickoff) {
       return json(400, {
         error: 'This round is locked because the first game of the round has already kicked off.'
       });
     }
 
-    const { data: player, error: upErr } = await sb
-      .from('players')
-      .upsert({ nickname }, { onConflict: 'nickname' })
-      .select()
-      .single();
+    if (submittedIds.size !== roundIds.length || !roundIds.every(id => submittedIds.has(id))) {
+      return json(400, {
+        error: `Please predict every match in ${round} before locking in your picks.`
+      });
+    }
 
-    if (upErr) throw upErr;
+    const invalid = predictions.find(p => {
+      return !['home', 'draw', 'away'].includes(p.predicted_winner) ||
+        !isValidScore(p.home_score) ||
+        !isValidScore(p.away_score);
+    });
+
+    if (invalid) {
+      return json(400, {
+        error: 'Please choose a winner/draw and enter both scores for every match.'
+      });
+    }
+
+    const { data: existingPlayer, error: findErr } = await sb
+      .from('players')
+      .select('*')
+      .ilike('nickname', nickname)
+      .maybeSingle();
+
+    if (findErr) throw findErr;
+
+    let player = existingPlayer;
+
+    if (!player) {
+      const { data: newPlayer, error: createErr } = await sb
+        .from('players')
+        .insert({ nickname })
+        .select()
+        .single();
+
+      if (createErr) throw createErr;
+      player = newPlayer;
+    }
+
+    const { data: existingPredictions, error: existingErr } = await sb
+      .from('predictions')
+      .select('id,match_id')
+      .eq('player_id', player.id)
+      .in('match_id', roundIds);
+
+    if (existingErr) throw existingErr;
+
+    if (existingPredictions && existingPredictions.length > 0) {
+      return json(400, {
+        error: `You have already locked in picks for ${round}. Picks are final once submitted.`
+      });
+    }
 
     const rows = predictions.map(p => ({
       player_id: player.id,
       match_id: p.match_id,
       predicted_winner: p.predicted_winner,
-      home_score: Number.isInteger(p.home_score) ? p.home_score : null,
-      away_score: Number.isInteger(p.away_score) ? p.away_score : null,
+      home_score: p.home_score,
+      away_score: p.away_score,
       updated_at: new Date().toISOString()
     }));
 
     const { error } = await sb
       .from('predictions')
-      .upsert(rows, { onConflict: 'player_id,match_id' });
+      .insert(rows);
 
     if (error) throw error;
 
-    return json(200, { ok: true, saved: rows.length });
+    return json(200, { ok: true, saved: rows.length, round });
   } catch (e) {
     return json(500, { error: e.message });
   }
