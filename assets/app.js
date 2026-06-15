@@ -64,8 +64,25 @@ async function api(path, opts={}){
   return j;
 }
 
+function allRoundNames(){
+  return [...new Set(state.matches.map(m=>m.round))]
+    .sort((a,b)=>roundLockTime(a)-roundLockTime(b));
+}
+
+function visibleRoundNames(){
+  const rounds=allRoundNames();
+  const now=Date.now();
+
+  return rounds.filter((round,index)=>{
+    if(index===0) return true;
+    const previousRound=rounds[index-1];
+    const previousStart=roundLockTime(previousRound);
+    return previousStart && now>=previousStart.getTime();
+  });
+}
+
 function roundNames(){
-  return [...new Set(state.matches.map(m=>m.round))];
+  return visibleRoundNames();
 }
 
 function displayRoundName(r){
@@ -197,6 +214,7 @@ function renderMatch(m, locked){
 }
 
 function renderMatches(active=roundNames()[0]){
+  if(!roundNames().includes(active)) active=roundNames()[0];
   renderTabs(active);
 
   const matches=roundMatches(active);
@@ -221,7 +239,7 @@ function renderMatches(active=roundNames()[0]){
       ${submittedLocked
         ? `✅ Your picks for this round are locked in and final.`
         : timeLocked
-          ? `🔒 This round is locked. Picks closed at ${fmtFull(lockTime)} Kuwait time.`
+          ? `🔒 This round is locked. Picks closed at ${fmtFull(lockTime)} Kuwait time. Next round is now open.`
           : `⏳ Predict every match in this round. Picks become final when you press Lock in picks. Deadline: ${fmtFull(lockTime)} Kuwait time.`
       }
     </div>
@@ -249,6 +267,7 @@ function renderMatches(active=roundNames()[0]){
 
 function renderView(tab=roundNames()[0]){
   if(tab==='leaderboard') return renderLeaderboardView();
+  if(!roundNames().includes(tab)) tab=roundNames()[0];
   return renderMatches(tab);
 }
 
@@ -321,6 +340,7 @@ $('#submitBtn').onclick=async()=>{
     const nickname=normalizeNickname($('#nickname').value);
     if(!nickname) throw new Error('Enter your nickname first.');
     if(!activeTab || activeTab==='leaderboard') throw new Error('Choose a round first.');
+    if(!roundNames().includes(activeTab)) throw new Error('This round is not open yet.');
     if(hasLockedRound(activeTab)) throw new Error('You have already locked in this round.');
     if(isRoundTimeLocked(activeTab)) throw new Error('This round is already locked.');
 
