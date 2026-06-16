@@ -49,19 +49,23 @@ button.danger{background:#b42318;}
 
 .day-header{color:var(--accent);font-size:18px;font-weight:900;letter-spacing:.13em;margin:28px 0 14px;text-transform:uppercase;}
 .match{border:1px solid var(--line);border-radius:24px;padding:18px;margin:14px 0;background:var(--card);box-shadow:0 8px 22px rgba(18,26,48,.08);}
-.match-top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;}
-.team{display:flex;align-items:center;gap:10px;min-width:0;}
+.match-top{display:grid;grid-template-columns:minmax(0,1fr) 86px minmax(0,1fr);align-items:center;gap:10px;}
+.team{display:flex;align-items:center;gap:9px;min-width:0;}
 .team.home{justify-content:flex-start;}
 .team.away{justify-content:flex-end;text-align:right;}
-.team-flag{font-size:25px;line-height:1;}
-.team-name{font-size:18px;font-weight:800;line-height:1.2;overflow-wrap:break-word;word-break:break-word;max-width:140px;}
-.result-score{font-size:31px;font-weight:950;letter-spacing:-.04em;white-space:nowrap;color:var(--text);min-width:90px;text-align:center;}
-.muted-score{font-size:22px;color:var(--accent);}
+.team-flag{width:32px;min-width:32px;height:24px;display:inline-flex;align-items:center;justify-content:center;line-height:1;}
+.team-flag-img{width:30px;height:21px;display:block;object-fit:cover;border-radius:4px;box-shadow:0 0 0 1px rgba(18,26,48,.12);background:#fff;}
+.flag-fallback{font-size:21px;}
+.team-name{font-size:17px;font-weight:850;line-height:1.12;overflow-wrap:normal;word-break:normal;hyphens:none;max-width:112px;text-wrap:balance;}
+.result-score{font-size:30px;font-weight:950;letter-spacing:-.04em;white-space:nowrap;color:var(--text);min-width:86px;text-align:center;}
+.muted-score{font-size:20px;color:var(--accent);}
 .meta-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:16px;color:var(--muted);font-size:14px;}
 .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 12px;border-radius:999px;background:#e9f7f0;color:var(--good);font-size:13px;font-weight:900;}
 .pick{display:grid;grid-template-columns:1fr;gap:9px;margin-top:16px;}
-.pick button{background:#f1f4fa;color:var(--text);border:1px solid var(--line);min-height:54px;}
+.pick button{background:#f1f4fa;color:var(--text);border:1px solid var(--line);min-height:54px;display:flex;align-items:center;justify-content:center;gap:8px;line-height:1.1;}
 .pick button.active{background:linear-gradient(135deg,#ffd166,#f7b731);color:#1b1300;border-color:#f0b429;}
+.pick-label-flag{width:24px;min-width:24px;height:18px;display:inline-flex;align-items:center;justify-content:center;}
+.pick-label-flag .team-flag-img{width:24px;height:17px;border-radius:3px;}
 .score{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;}
 .score input{width:92px;text-align:center;font-size:20px;font-weight:800;}
 .score-dash{color:var(--muted);font-weight:900;}
@@ -99,9 +103,13 @@ button.danger{background:#b42318;}
   .app-header h1{font-size:25px;}
   .change-name-btn{font-size:12px;padding:9px 10px;}
   .match{padding:14px;}
-  .team-name{font-size:16px;max-width:100px;}
-  .result-score{font-size:26px;min-width:70px;}
-  .team-flag{font-size:22px;}
+  .match-top{grid-template-columns:minmax(0,1fr) 72px minmax(0,1fr);gap:7px;}
+  .team{gap:7px;}
+  .team-flag{width:29px;min-width:29px;height:22px;}
+  .team-flag-img{width:27px;height:19px;border-radius:4px;}
+  .team-name{font-size:15px;max-width:88px;}
+  .result-score{font-size:24px;min-width:72px;}
+  .muted-score{font-size:18px;}
 }
 
 @media(min-width:700px){
@@ -116,7 +124,8 @@ button.danger{background:#b42318;}
   .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:start;}
   .leaderboard{position:sticky;top:20px;}
   .pick{grid-template-columns:1fr 1fr 1fr;}
-  .team-name{font-size:24px;max-width:190px;}
-  .result-score{font-size:40px;}
+  .team-name{font-size:22px;max-width:180px;}
+  .result-score{font-size:38px;}
+  .match-top{grid-template-columns:minmax(0,1fr) 110px minmax(0,1fr);}
   .tabs{grid-template-columns:repeat(4,1fr);}
 }
