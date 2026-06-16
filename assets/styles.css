@@ -59,7 +59,9 @@ button.danger{background:#b42318;}
 .team-name{font-size:17px;font-weight:850;line-height:1.12;overflow-wrap:normal;word-break:normal;hyphens:none;max-width:112px;text-wrap:balance;}
 .result-score{font-size:30px;font-weight:950;letter-spacing:-.04em;white-space:nowrap;color:var(--text);min-width:86px;text-align:center;}
 .muted-score{font-size:20px;color:var(--accent);}
-.meta-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:16px;color:var(--muted);font-size:14px;}
+.match-info{margin-top:14px;}
+.meta-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-size:13px;}
+.venue-line{margin-top:7px;text-align:center;color:var(--muted);font-size:13px;font-weight:650;line-height:1.3;}
 .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 12px;border-radius:999px;background:#e9f7f0;color:var(--good);font-size:13px;font-weight:900;}
 .pick{display:grid;grid-template-columns:1fr;gap:9px;margin-top:16px;}
 .pick button{background:#f1f4fa;color:var(--text);border:1px solid var(--line);min-height:54px;display:flex;align-items:center;justify-content:center;gap:8px;line-height:1.1;}
@@ -110,6 +112,7 @@ button.danger{background:#b42318;}
   .team-name{font-size:15px;max-width:88px;}
   .result-score{font-size:24px;min-width:72px;}
   .muted-score{font-size:18px;}
+  .meta-row,.venue-line{font-size:12px;}
 }
 
 @media(min-width:700px){
