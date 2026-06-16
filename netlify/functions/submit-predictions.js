@@ -1,5 +1,7 @@
 const { client, json } = require('./_supabase');
 
+const LOCK_OFFSET_MS = 2 * 60 * 60 * 1000;
+
 function normalizeNickname(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
@@ -52,10 +54,11 @@ exports.handler = async (event) => {
     const roundIds = roundMatches.map(m => String(m.id));
     const submittedIds = new Set(ids.map(String));
     const firstKickoff = roundMatches[0] ? new Date(roundMatches[0].kickoff).getTime() : null;
+    const deadline = firstKickoff ? firstKickoff - LOCK_OFFSET_MS : null;
 
-    if (firstKickoff && Date.now() >= firstKickoff) {
+    if (deadline && Date.now() >= deadline) {
       return json(400, {
-        error: 'This round is locked because the first game of the round has already kicked off.'
+        error: 'This round is locked. Picks close 2 hours before the first game of the round.'
       });
     }
 
