@@ -62,10 +62,14 @@ function allRoundNames(){
 function visibleRoundNames(){
   const rounds=allRoundNames();
   const now=Date.now();
+
   return rounds.filter((round,index)=>{
+    const currentStart=roundLockTime(round);
+    const isTimeClosed=currentStart && now>=currentStart.getTime();
+    const isSubmittedClosed=hasLockedRound(round);
+    if(isTimeClosed || isSubmittedClosed) return false;
     if(index===0) return true;
-    const previousRound=rounds[index-1];
-    const previousStart=roundLockTime(previousRound);
+    const previousStart=roundLockTime(rounds[index-1]);
     return previousStart && now>=previousStart.getTime();
   });
 }
@@ -76,7 +80,6 @@ function roundMatches(round){return state.matches.filter(m=>m.round===round).sor
 function roundLockTime(round){const games=roundMatches(round); return games.length?new Date(games[0].kickoff):null;}
 function isRoundTimeLocked(round){const lock=roundLockTime(round); return lock ? Date.now()>=lock.getTime() : false;}
 function hasLockedRound(round){return roundMatches(round).some(m=>savedMatchIds.has(String(m.id)));}
-function isRoundLocked(round){return isRoundTimeLocked(round)||hasLockedRound(round);}
 function hasAnyLockedPicks(){return savedMatchIds.size>0;}
 
 function updateNameUi(){
@@ -117,10 +120,7 @@ async function setNameFromInput(){
 function renderTabs(active){
   activeTab=active;
   const rounds=roundNames();
-  const roundButtons=rounds.map(r=>{
-    const locked=isRoundLocked(r);
-    return `<button class="${r===active?'active':''}" data-tab="${r}">${displayRoundName(r)} ${locked?'🔒':''}</button>`;
-  }).join('');
+  const roundButtons=rounds.map(r=>`<button class="${r===active?'active':''}" data-tab="${r}">${displayRoundName(r)}</button>`).join('');
 
   $('#roundTabs').innerHTML=roundButtons+`<button class="${active==='leaderboard'?'active':''}" data-tab="leaderboard">Leaderboard</button>`;
   document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>renderView(b.dataset.tab));
@@ -148,47 +148,51 @@ function pickLabel(kind,team){
   return `<span class="pick-label-flag">${flagImg(team)}</span><span>${teamName(team)}</span>`;
 }
 
-function renderMatch(m,locked){
+function renderMatch(m){
   const p=picks[m.id]||{};
-  const hasResult=m.home_score!=null&&m.away_score!=null;
-  const result=hasResult?`<div class="result-score">${m.home_score} – ${m.away_score}</div>`:`<div class="result-score muted-score">${fmtTime(m.kickoff)}</div>`;
+  const result=`<div class="result-score muted-score">${fmtTime(m.kickoff)}</div>`;
   const opts=[['home',pickLabel('team',m.home)],['draw',pickLabel('draw')],['away',pickLabel('team',m.away)]].map(([v,label])=>`
-    <button class="${p.predicted_winner===v?'active':''}" ${locked?'disabled':''} data-pick="${m.id}:${v}">${label}</button>
+    <button class="${p.predicted_winner===v?'active':''}" data-pick="${m.id}:${v}">${label}</button>
   `).join('');
 
-  return `<div class="match ${locked?'locked':''}">
+  return `<div class="match">
     <div class="match-top">${teamBlock(m.home,'home')}${result}${teamBlock(m.away,'away')}</div>
-    <div class="meta-row"><span class="pill">${locked?'LOCKED':'OPEN'}</span><span>Group ${m.group_name||''}</span><span>${fmtTime(m.kickoff)} Kuwait</span></div>
+    <div class="meta-row"><span>Group ${m.group_name||''}</span><span>${fmtTime(m.kickoff)} Kuwait</span></div>
     <div class="pick">${opts}</div>
     <div class="score">
-      <input type="number" min="0" max="20" placeholder="${teamName(m.home)}" value="${p.home_score??''}" ${locked?'disabled':''} data-score="${m.id}:home">
+      <input type="number" min="0" max="20" placeholder="${teamName(m.home)}" value="${p.home_score??''}" data-score="${m.id}:home">
       <span class="score-dash">-</span>
-      <input type="number" min="0" max="20" placeholder="${teamName(m.away)}" value="${p.away_score??''}" ${locked?'disabled':''} data-score="${m.id}:away">
+      <input type="number" min="0" max="20" placeholder="${teamName(m.away)}" value="${p.away_score??''}" data-score="${m.id}:away">
     </div>
   </div>`;
 }
 
+function noOpenRoundsHtml(){
+  return `<div class="notice"><b>No open round right now.</b><br><span class="small">The next round will appear automatically when predictions open.</span></div>`;
+}
+
 function renderMatches(active=roundNames()[0]){
-  if(!roundNames().includes(active)) active=roundNames()[0];
+  const openRounds=roundNames();
+  if(!openRounds.length){
+    renderTabs('leaderboard');
+    $('#submitBtn').style.display='none';
+    $('#matches').innerHTML=noOpenRoundsHtml();
+    return;
+  }
+  if(!openRounds.includes(active)) active=openRounds[0];
   renderTabs(active);
   const matches=roundMatches(active);
   const lockTime=roundLockTime(active);
-  const timeLocked=isRoundTimeLocked(active);
-  const submittedLocked=hasLockedRound(active);
-  const locked=timeLocked||submittedLocked;
 
   $('#submitBtn').style.display='block';
-  $('#submitBtn').disabled=locked;
-  $('#submitBtn').textContent=submittedLocked?'Picks locked':'Lock in picks';
+  $('#submitBtn').disabled=false;
+  $('#submitBtn').textContent='Lock in picks';
 
   const grouped={};
   matches.forEach(m=>{const day=fmtDay(m.kickoff); if(!grouped[day]) grouped[day]=[]; grouped[day].push(m);});
 
-  const lockNotice=lockTime?`<div class="round-lock ${locked?'locked-notice':'open-notice'}">
-    ${submittedLocked?`✅ Your picks for this round are locked in and final.`:timeLocked?`🔒 This round is locked. Picks closed at ${fmtFull(lockTime)} Kuwait time. Next round is now open.`:`⏳ Predict every match in this round. Picks become final when you press Lock in picks. Deadline: ${fmtFull(lockTime)} Kuwait time.`}
-  </div>`:'';
-
-  const html=lockNotice+Object.entries(grouped).map(([day,games])=>`<div class="day-header">${day}</div>${games.map(m=>renderMatch(m,locked)).join('')}`).join('');
+  const lockNotice=lockTime?`<div class="round-lock open-notice">⏳ Predict every match in this round. Picks become final when you press Lock in picks. Deadline: ${fmtFull(lockTime)} Kuwait time.</div>`:'';
+  const html=lockNotice+Object.entries(grouped).map(([day,games])=>`<div class="day-header">${day}</div>${games.map(m=>renderMatch(m)).join('')}`).join('');
   $('#matches').innerHTML=html||'<div class="notice">No matches in this round.</div>';
 
   document.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{const [id,v]=b.dataset.pick.split(':'); picks[id]={...(picks[id]||{}),predicted_winner:v}; renderMatches(active);});
@@ -197,7 +201,6 @@ function renderMatches(active=roundNames()[0]){
 
 function renderView(tab=roundNames()[0]){
   if(tab==='leaderboard') return renderLeaderboardView();
-  if(!roundNames().includes(tab)) tab=roundNames()[0];
   return renderMatches(tab);
 }
 
