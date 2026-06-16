@@ -7,29 +7,39 @@ let nameLocked=localStorage.getItem('kaifanwc_name_locked')==='1';
 
 const $=s=>document.querySelector(s);
 
-const FLAGS={
-  "Mexico":"🇲🇽","South Africa":"🇿🇦","South Korea":"🇰🇷","Korea Republic":"🇰🇷","Czechia":"🇨🇿",
-  "Canada":"🇨🇦","Bosnia and Herzegovina":"🇧🇦","Qatar":"🇶🇦","Switzerland":"🇨🇭",
-  "Brazil":"🇧🇷","Morocco":"🇲🇦","Haiti":"🇭🇹","Scotland":"🏴",
-  "United States":"🇺🇸","Paraguay":"🇵🇾","Australia":"🇦🇺","Turkey":"🇹🇷",
-  "Germany":"🇩🇪","Curacao":"🇨🇼","Ivory Coast":"🇨🇮","Ecuador":"🇪🇨",
-  "Netherlands":"🇳🇱","Japan":"🇯🇵","Sweden":"🇸🇪","Tunisia":"🇹🇳",
-  "Belgium":"🇧🇪","Egypt":"🇪🇬","Iran":"🇮🇷","New Zealand":"🇳🇿",
-  "Spain":"🇪🇸","Cape Verde":"🇨🇻","Saudi Arabia":"🇸🇦","Uruguay":"🇺🇾",
-  "France":"🇫🇷","Senegal":"🇸🇳","Iraq":"🇮🇶","Norway":"🇳🇴",
-  "Argentina":"🇦🇷","Algeria":"🇩🇿","Austria":"🇦🇹","Jordan":"🇯🇴",
-  "Portugal":"🇵🇹","DR Congo":"🇨🇩","Uzbekistan":"🇺🇿","Colombia":"🇨🇴",
-  "England":"🏴","Croatia":"🇭🇷","Ghana":"🇬🇭","Panama":"🇵🇦"
+const FLAG_CODES={
+  "Mexico":"mx","South Africa":"za","South Korea":"kr","Korea Republic":"kr","Czechia":"cz",
+  "Canada":"ca","Bosnia and Herzegovina":"ba","Qatar":"qa","Switzerland":"ch",
+  "Brazil":"br","Morocco":"ma","Haiti":"ht","Scotland":"gb-sct",
+  "United States":"us","Paraguay":"py","Australia":"au","Turkey":"tr",
+  "Germany":"de","Curacao":"cw","Ivory Coast":"ci","Ecuador":"ec",
+  "Netherlands":"nl","Japan":"jp","Sweden":"se","Tunisia":"tn",
+  "Belgium":"be","Egypt":"eg","Iran":"ir","New Zealand":"nz",
+  "Spain":"es","Cape Verde":"cv","Saudi Arabia":"sa","Uruguay":"uy",
+  "France":"fr","Senegal":"sn","Iraq":"iq","Norway":"no",
+  "Argentina":"ar","Algeria":"dz","Austria":"at","Jordan":"jo",
+  "Portugal":"pt","DR Congo":"cd","Uzbekistan":"uz","Colombia":"co",
+  "England":"gb-eng","Croatia":"hr","Ghana":"gh","Panama":"pa"
 };
 
 const SHORT_NAMES={
   "Bosnia and Herzegovina":"Bosnia",
   "Korea Republic":"South Korea",
+  "United States":"USA",
+  "South Africa":"South Africa",
+  "Saudi Arabia":"Saudi Arabia",
+  "New Zealand":"New Zealand",
   "DR Congo":"DR Congo",
-  "Ivory Coast":"Ivory Coast"
+  "Ivory Coast":"Ivory Coast",
+  "Cape Verde":"Cape Verde"
 };
 
-function flag(team){return FLAGS[team] || "🏳️";}
+function flagCode(team){return FLAG_CODES[team] || '';} 
+function flagImg(team){
+  const code=flagCode(team);
+  if(!code) return '<span class="flag-fallback">🏳️</span>';
+  return `<img class="team-flag-img" src="https://flagcdn.com/${code}.svg" alt="${team} flag" loading="lazy">`;
+}
 function teamName(team){return SHORT_NAMES[team] || team;}
 function normalizeNickname(value){return String(value||'').trim().replace(/\s+/g,' ').toLowerCase();}
 function displayName(value){return String(value||'').replace(/\b\w/g,c=>c.toUpperCase());}
@@ -130,14 +140,19 @@ function renderLeaderboardView(){
 }
 
 function teamBlock(team,side){
-  return `<div class="team ${side}"><span class="team-flag">${flag(team)}</span><span class="team-name">${teamName(team)}</span></div>`;
+  return `<div class="team ${side}"><span class="team-flag">${flagImg(team)}</span><span class="team-name">${teamName(team)}</span></div>`;
+}
+
+function pickLabel(kind,team){
+  if(kind==='draw') return 'Draw';
+  return `<span class="pick-label-flag">${flagImg(team)}</span><span>${teamName(team)}</span>`;
 }
 
 function renderMatch(m,locked){
   const p=picks[m.id]||{};
   const hasResult=m.home_score!=null&&m.away_score!=null;
   const result=hasResult?`<div class="result-score">${m.home_score} – ${m.away_score}</div>`:`<div class="result-score muted-score">${fmtTime(m.kickoff)}</div>`;
-  const opts=[['home',`${flag(m.home)} ${teamName(m.home)}`],['draw','Draw'],['away',`${flag(m.away)} ${teamName(m.away)}`]].map(([v,label])=>`
+  const opts=[['home',pickLabel('team',m.home)],['draw',pickLabel('draw')],['away',pickLabel('team',m.away)]].map(([v,label])=>`
     <button class="${p.predicted_winner===v?'active':''}" ${locked?'disabled':''} data-pick="${m.id}:${v}">${label}</button>
   `).join('');
 
