@@ -51,7 +51,11 @@
     "Curacao": 58
   };
 
+  const LOCK_OFFSET_MS = 2 * 60 * 60 * 1000;
+  let stateMatches = [];
+
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const fmtFull = d => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kuwait", dateStyle: "medium", timeStyle: "short" }).format(new Date(d));
 
   function percentModel(home, away) {
     const h = RATINGS[home] ?? 70;
@@ -127,12 +131,65 @@
     });
   }
 
-  const observer = new MutationObserver(() => injectHelpers());
-  const start = () => {
+  function roundNamesFromState(){
+    return [...new Set(stateMatches.map(m => m.round))];
+  }
+
+  function activeRoundName() {
+    const active = document.querySelector('#roundTabs [data-tab].active');
+    if (!active) return null;
+    const label = active.textContent.trim();
+    if (label.includes('Leaderboard') || label.includes('Live')) return null;
+    return roundNamesFromState().find(r => label.includes(String(r).replace('Group Stage - ', '').replace('Group Stage ', ''))) || null;
+  }
+
+  function roundDeadline(round) {
+    const games = stateMatches.filter(m => m.round === round).sort((a,b) => new Date(a.kickoff) - new Date(b.kickoff));
+    if (!games.length) return null;
+    return new Date(new Date(games[0].kickoff).getTime() - LOCK_OFFSET_MS);
+  }
+
+  function applyRoundDeadline() {
+    const round = activeRoundName();
+    const notice = document.querySelector('.round-lock.open-notice');
+    if (!round || !notice) return;
+    const deadline = roundDeadline(round);
+    if (!deadline) return;
+
+    notice.innerHTML = `⏳ Predict every match in this round. Picks close <b>2 hours before the first kickoff</b>. Deadline: ${fmtFull(deadline)} Kuwait time.`;
+
+    if (Date.now() >= deadline.getTime()) {
+      const submitBtn = document.querySelector('#submitBtn');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.style.display = 'none';
+      }
+      const matchesEl = document.querySelector('#matches');
+      if (matchesEl) {
+        matchesEl.innerHTML = `<div class="notice"><b>This round is locked.</b><br><span class="small">Picks closed at ${fmtFull(deadline)} Kuwait time, 2 hours before the first kickoff.</span></div>`;
+      }
+    }
+  }
+
+  const observer = new MutationObserver(() => {
+    injectHelpers();
+    applyRoundDeadline();
+  });
+
+  const start = async () => {
     const target = document.querySelector("#matches");
     if (!target) return;
+    try {
+      const res = await fetch('/.netlify/functions/get-state');
+      const data = await res.json();
+      stateMatches = Array.isArray(data.matches) ? data.matches : [];
+    } catch (_) {
+      stateMatches = [];
+    }
     observer.observe(target, { childList: true, subtree: true });
     injectHelpers();
+    applyRoundDeadline();
+    setInterval(applyRoundDeadline, 30000);
   };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
