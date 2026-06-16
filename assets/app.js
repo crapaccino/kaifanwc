@@ -34,6 +34,81 @@ const SHORT_NAMES={
   "Cape Verde":"Cape Verde"
 };
 
+const VENUES={
+  "Mexico|South Africa":"Estadio Azteca, Mexico City",
+  "Czechia|South Korea":"Estadio Akron, Guadalajara",
+  "Bosnia and Herzegovina|Canada":"BMO Field, Toronto",
+  "Paraguay|United States":"SoFi Stadium, Los Angeles",
+  "Haiti|Scotland":"Gillette Stadium, Boston",
+  "Australia|Turkey":"BC Place, Vancouver",
+  "Brazil|Morocco":"MetLife Stadium, New York/New Jersey",
+  "Qatar|Switzerland":"Levi’s Stadium, San Francisco Bay Area",
+  "Ecuador|Ivory Coast":"Lincoln Financial Field, Philadelphia",
+  "Curacao|Germany":"NRG Stadium, Houston",
+  "Japan|Netherlands":"AT&T Stadium, Dallas",
+  "Sweden|Tunisia":"Estadio BBVA, Monterrey",
+  "Saudi Arabia|Uruguay":"Hard Rock Stadium, Miami",
+  "Cape Verde|Spain":"Mercedes-Benz Stadium, Atlanta",
+  "Iran|New Zealand":"SoFi Stadium, Los Angeles",
+  "Belgium|Egypt":"Lumen Field, Seattle",
+  "France|Senegal":"MetLife Stadium, New York/New Jersey",
+  "Iraq|Norway":"Gillette Stadium, Boston",
+  "Algeria|Argentina":"Arrowhead Stadium, Kansas City",
+  "Austria|Jordan":"Levi’s Stadium, San Francisco Bay Area",
+  "DR Congo|Portugal":"NRG Stadium, Houston",
+  "Croatia|England":"AT&T Stadium, Dallas",
+  "Ghana|Panama":"BMO Field, Toronto",
+  "Colombia|Uzbekistan":"Estadio Azteca, Mexico City",
+  "Czechia|South Africa":"Mercedes-Benz Stadium, Atlanta",
+  "Bosnia and Herzegovina|Switzerland":"SoFi Stadium, Los Angeles",
+  "Canada|Qatar":"BC Place, Vancouver",
+  "Mexico|South Korea":"Estadio Akron, Guadalajara",
+  "Australia|United States":"Lumen Field, Seattle",
+  "Morocco|Scotland":"Gillette Stadium, Boston",
+  "Brazil|Haiti":"Lincoln Financial Field, Philadelphia",
+  "Paraguay|Turkey":"Levi’s Stadium, San Francisco Bay Area",
+  "Netherlands|Sweden":"NRG Stadium, Houston",
+  "Germany|Ivory Coast":"BMO Field, Toronto",
+  "Curacao|Ecuador":"Arrowhead Stadium, Kansas City",
+  "Japan|Tunisia":"Estadio BBVA, Monterrey",
+  "Saudi Arabia|Spain":"Mercedes-Benz Stadium, Atlanta",
+  "Belgium|Iran":"SoFi Stadium, Los Angeles",
+  "Cape Verde|Uruguay":"Hard Rock Stadium, Miami",
+  "Egypt|New Zealand":"BC Place, Vancouver",
+  "Argentina|Austria":"AT&T Stadium, Dallas",
+  "France|Iraq":"Lincoln Financial Field, Philadelphia",
+  "Norway|Senegal":"MetLife Stadium, New York/New Jersey",
+  "Algeria|Jordan":"Levi’s Stadium, San Francisco Bay Area",
+  "Portugal|Uzbekistan":"NRG Stadium, Houston",
+  "England|Ghana":"Gillette Stadium, Boston",
+  "Croatia|Panama":"BMO Field, Toronto",
+  "Colombia|DR Congo":"Estadio Akron, Guadalajara",
+  "Canada|Switzerland":"BC Place, Vancouver",
+  "Bosnia and Herzegovina|Qatar":"Lumen Field, Seattle",
+  "Brazil|Scotland":"Hard Rock Stadium, Miami",
+  "Haiti|Morocco":"Mercedes-Benz Stadium, Atlanta",
+  "Czechia|Mexico":"Estadio Azteca, Mexico City",
+  "South Africa|South Korea":"Estadio BBVA, Monterrey",
+  "Ecuador|Germany":"MetLife Stadium, New York/New Jersey",
+  "Curacao|Ivory Coast":"Lincoln Financial Field, Philadelphia",
+  "Japan|Sweden":"AT&T Stadium, Dallas",
+  "Netherlands|Tunisia":"Arrowhead Stadium, Kansas City",
+  "Turkey|United States":"SoFi Stadium, Los Angeles",
+  "Australia|Paraguay":"Levi’s Stadium, San Francisco Bay Area",
+  "France|Norway":"Gillette Stadium, Boston",
+  "Iraq|Senegal":"Lincoln Financial Field, Philadelphia",
+  "Spain|Uruguay":"Hard Rock Stadium, Miami",
+  "Cape Verde|Saudi Arabia":"BC Place, Vancouver",
+  "Belgium|New Zealand":"BMO Field, Toronto",
+  "Egypt|Iran":"Lumen Field, Seattle",
+  "England|Panama":"MetLife Stadium, New York/New Jersey",
+  "Croatia|Ghana":"BMO Field, Toronto",
+  "Colombia|Portugal":"NRG Stadium, Houston",
+  "DR Congo|Uzbekistan":"Estadio Akron, Guadalajara",
+  "Argentina|Jordan":"Arrowhead Stadium, Kansas City",
+  "Algeria|Austria":"Levi’s Stadium, San Francisco Bay Area"
+};
+
 function flagCode(team){return FLAG_CODES[team] || '';} 
 function flagImg(team){
   const code=flagCode(team);
@@ -43,6 +118,9 @@ function flagImg(team){
 function teamName(team){return SHORT_NAMES[team] || team;}
 function normalizeNickname(value){return String(value||'').trim().replace(/\s+/g,' ').toLowerCase();}
 function displayName(value){return String(value||'').replace(/\b\w/g,c=>c.toUpperCase());}
+function venueForMatch(m){
+  return VENUES[[m.home,m.away].sort().join('|')] || m.venue || m.stadium || '';
+}
 
 const fmtTime=d=>new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kuwait",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(d));
 const fmtDay=d=>new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kuwait",weekday:"short",day:"numeric",month:"short"}).format(new Date(d)).toUpperCase();
@@ -150,6 +228,7 @@ function pickLabel(kind,team){
 
 function renderMatch(m){
   const p=picks[m.id]||{};
+  const venue=venueForMatch(m);
   const result=`<div class="result-score muted-score">${fmtTime(m.kickoff)}</div>`;
   const opts=[['home',pickLabel('team',m.home)],['draw',pickLabel('draw')],['away',pickLabel('team',m.away)]].map(([v,label])=>`
     <button class="${p.predicted_winner===v?'active':''}" data-pick="${m.id}:${v}">${label}</button>
@@ -157,7 +236,10 @@ function renderMatch(m){
 
   return `<div class="match">
     <div class="match-top">${teamBlock(m.home,'home')}${result}${teamBlock(m.away,'away')}</div>
-    <div class="meta-row"><span>Group ${m.group_name||''}</span><span>${fmtTime(m.kickoff)} Kuwait</span></div>
+    <div class="match-info">
+      <div class="meta-row"><span>Group ${m.group_name||''}</span><span>${fmtTime(m.kickoff)} Kuwait</span></div>
+      ${venue?`<div class="venue-line">📍 ${venue}</div>`:''}
+    </div>
     <div class="pick">${opts}</div>
     <div class="score">
       <input type="number" min="0" max="20" placeholder="${teamName(m.home)}" value="${p.home_score??''}" data-score="${m.id}:home">
