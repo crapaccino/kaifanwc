@@ -218,6 +218,37 @@ function renderMatch(m){
   </div>`;
 }
 
+function actualWinnerKey(m){
+  if(m.home_score==null||m.away_score==null) return null;
+  if(m.home_score>m.away_score) return 'home';
+  if(m.away_score>m.home_score) return 'away';
+  return 'draw';
+}
+function goalDistance(p,m){
+  if(m.home_score==null||m.away_score==null) return null;
+  return Math.abs(Number(p.home_score)-Number(m.home_score))+Math.abs(Number(p.away_score)-Number(m.away_score));
+}
+function statusForPrediction(p,m){
+  const winner=actualWinnerKey(m);
+  if(!winner) return {label:'Waiting score',cls:'neutral',icon:'⏳'};
+  const dist=goalDistance(p,m);
+  if(dist===0) return {label:'Perfect',cls:'perfect',icon:'🥇'};
+  if(p.predicted_winner===winner) return {label: dist<=2 ? `${dist} goal${dist===1?'':'s'} away` : 'Winner correct',cls:'close',icon:dist<=2?'🎯':'🟡'};
+  return {label:'Currently wrong',cls:'wrong',icon:'🔴'};
+}
+function crowdPick(summary){
+  if(!summary||!summary.total) return null;
+  return [summary.home,summary.draw,summary.away].sort((a,b)=>b.percent-a.percent)[0];
+}
+function summaryItemForPrediction(summary,key){
+  if(!summary) return null;
+  return key==='home'?summary.home:key==='away'?summary.away:summary.draw;
+}
+function isBoldPick(p,summary){
+  const item=summaryItemForPrediction(summary,p.predicted_winner);
+  return summary && summary.total>=3 && item && item.percent>0 && item.percent<=15;
+}
+
 function renderLiveView(){
   renderTabs('live');
   $('#submitBtn').style.display='none';
@@ -230,12 +261,15 @@ function renderLiveView(){
   const venue=venueForMatch(m);
   const actual=m.home_score!=null&&m.away_score!=null?`${m.home_score} – ${m.away_score}`:fmtTime(m.kickoff);
   const summary=live.summary||{total:0,home:{percent:0,count:0,label:m.home},draw:{percent:0,count:0,label:'Draw'},away:{percent:0,count:0,label:m.away}};
-  const rows=(live.predictions||[]).map(p=>`
-    <div class="live-pick-row">
-      <div><b>${displayName(p.nickname)}</b><span>${p.predicted_winner_label}</span></div>
+  const crowd=crowdPick(summary);
+  const rows=(live.predictions||[]).map(p=>{
+    const status=statusForPrediction(p,m);
+    const bold=isBoldPick(p,summary);
+    return `<div class="live-pick-row ${status.cls}${bold?' bold-pick-row':''}">
+      <div><b>${displayName(p.nickname)}</b><span>${p.predicted_winner_label}</span><em class="status-chip ${status.cls}">${status.icon} ${status.label}</em>${bold?'<em class="status-chip bold">⚡ Bold pick</em>':''}</div>
       <strong>${p.home_score} - ${p.away_score}</strong>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
   const bar=(item,cls)=>`<div class="percent-row"><div class="percent-label"><span>${item.label}</span><b>${item.percent}%</b></div><div class="percent-track"><div class="percent-fill ${cls}" style="width:${item.percent}%"></div></div><small>${item.count} pick${item.count===1?'':'s'}</small></div>`;
 
   $('#matches').innerHTML=`
@@ -244,6 +278,7 @@ function renderLiveView(){
       <div class="match-top live-match-top">${teamBlock(m.home,'home')}<div class="result-score">${actual}</div>${teamBlock(m.away,'away')}</div>
       <div class="match-info"><div class="meta-row"><span>Group ${m.group_name||''}</span><span>${fmtTime(m.kickoff)} Kuwait</span></div>${venue?`<div class="venue-line">📍 ${venue}</div>`:''}</div>
     </div>
+    ${crowd?`<div class="live-card crowd-card"><div class="crowd-label">👥 Crowd pick</div><h2>${crowd.label}</h2><p>${crowd.percent}% of players picked this outcome.</p></div>`:''}
     <div class="live-card">
       <h2>Prediction split</h2>
       <p class="small">Based on ${summary.total} locked prediction${summary.total===1?'':'s'} for this match.</p>
