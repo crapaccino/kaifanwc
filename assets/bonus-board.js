@@ -1,5 +1,12 @@
 (() => {
   const pretty = v => String(v || '').replace(/\b\w/g, c => c.toUpperCase());
+  const SHORT = {
+    'France':'🇫🇷','England':'🏴','Spain':'🇪🇸','Argentina':'🇦🇷','Brazil':'🇧🇷','Any Other Team':'🌍 Other',
+    'Kylian Mbappe':'🇫🇷 KM','Lamine Yamal':'🇪🇸 LY','Harry Kane':'🏴 HK','Lionel Messi':'🇦🇷 LM','Michael Olise':'🇫🇷 MO','Any Other Player':'👤 Other',
+    'Erling Haaland':'🇳🇴 EH','Kai Havertz':'🇩🇪 KH',
+    'Mike Maignan':'🇫🇷 MM','Emiliano Martinez':'🇦🇷 EM','Jordan Pickford':'🏴 JP','Unai Simon':'🇪🇸 US','Alisson Becker':'🇧🇷 AB','Any Other Goalkeeper':'🧤 Other'
+  };
+  const compact = v => SHORT[v] || (v || '-');
   async function addBoard(){
     const target = document.querySelector('.leaderboard-tab');
     if(!target || target.querySelector('.bonus-board')) return;
@@ -13,9 +20,9 @@
     const names = Object.keys(grouped).sort();
     const body = names.map(name => {
       const p = grouped[name];
-      return '<tr><td><b>'+pretty(name)+'</b></td><td>'+(p.winner||'-')+'</td><td>'+(p.potm||'-')+'</td><td>'+(p.golden_boot||'-')+'</td><td>'+(p.golden_glove||'-')+'</td></tr>';
+      return '<tr><td><b>'+pretty(name)+'</b></td><td>'+compact(p.winner)+'</td><td>'+compact(p.potm)+'</td><td>'+compact(p.golden_boot)+'</td><td>'+compact(p.golden_glove)+'</td></tr>';
     }).join('') || '<tr><td colspan="5">No bonus predictions locked yet.</td></tr>';
-    target.insertAdjacentHTML('beforeend','<div class="bonus-card bonus-board"><h2>Tournament Predictions</h2><p class="bonus-note">Locked bonus picks for the end of the tournament.</p><table><thead><tr><th>Name</th><th>Winner</th><th>POTM</th><th>Golden Boot</th><th>Golden Glove</th></tr></thead><tbody>'+body+'</tbody></table></div>');
+    target.insertAdjacentHTML('beforeend','<div class="bonus-card bonus-board"><h2>Tournament Predictions</h2><p class="bonus-note">Locked bonus picks. 🌍 Other = any unlisted team, 👤 Other = any unlisted player, 🧤 Other = any unlisted goalkeeper.</p><table><thead><tr><th>Name</th><th>Winner</th><th>POTM</th><th>Boot</th><th>Glove</th></tr></thead><tbody>'+body+'</tbody></table></div>');
   }
   window.addEventListener('load', () => { setInterval(addBoard, 1000); addBoard(); });
 })();
