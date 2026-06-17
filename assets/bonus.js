@@ -16,13 +16,18 @@
 
   const storeKey = () => 'kaifanwc_bonus_' + (localStorage.getItem('kaifanwc_name') || 'guest');
   const lockKey = () => storeKey() + '_locked';
-  const readPicks = () => {
-    try { return JSON.parse(localStorage.getItem(storeKey()) || '{}'); } catch (_) { return {}; }
-  };
+  const readPicks = () => { try { return JSON.parse(localStorage.getItem(storeKey()) || '{}'); } catch (_) { return {}; } };
   const writePicks = p => localStorage.setItem(storeKey(), JSON.stringify(p));
   const isLocked = () => localStorage.getItem(lockKey()) === '1';
+  const nickname = () => String(localStorage.getItem('kaifanwc_name') || '').trim().toLowerCase();
+  const optionNames = cat => cat.options.map(o => o.name);
 
-  function optionNames(cat){ return cat.options.map(o => o.name); }
+  async function api(path, opts={}){
+    const r = await fetch('/.netlify/functions/' + path, opts);
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error || 'Request failed');
+    return j;
+  }
 
   function ensureTab() {
     const tabs = document.querySelector('#roundTabs');
@@ -66,7 +71,7 @@
 
     const picks = readPicks();
     const locked = isLocked();
-    matches.innerHTML = '<div class="bonus-card"><h2>Bonus Predictions</h2><p class="bonus-note">These are extra ways to win points. Percentages are simple guide estimates, not guarantees. Once you lock them in, they are final.</p></div>' +
+    matches.innerHTML = '<div class="bonus-card"><h2>Bonus Predictions</h2><p class="bonus-note">These are extra ways to win points. Percentages are simple guide estimates, not guarantees. Once you lock them in, they are final and visible on the leaderboard.</p></div>' +
       CATEGORIES.map(c => renderCategory(c, picks, locked)).join('') +
       '<div class="bonus-card"><div class="bonus-actions"><button id="lockBonusBtn" '+(locked?'disabled':'')+'>'+(locked?'Bonus predictions locked':'Lock bonus predictions')+'</button><button id="clearBonusBtn" class="secondary" '+(locked?'disabled':'')+'>Clear bonus picks</button></div><p class="bonus-status" id="bonusStatus">'+(locked?'<span class="ok">Your bonus predictions are locked.</span>':'Pick all 4 categories, then lock them in.')+'</p></div>';
 
@@ -94,15 +99,24 @@
     });
 
     const lock = document.querySelector('#lockBonusBtn');
-    if (lock) lock.onclick = () => {
-      const p = readPicks();
-      const missing = CATEGORIES.find(c => !p[c.key] || !String(p[c.key]).trim());
-      if (missing) {
-        document.querySelector('#bonusStatus').innerHTML = '<span class="bad">Choose a pick for '+missing.title+'.</span>';
-        return;
+    if (lock) lock.onclick = async () => {
+      try{
+        const p = readPicks();
+        const missing = CATEGORIES.find(c => !p[c.key] || !String(p[c.key]).trim());
+        if (missing) {
+          document.querySelector('#bonusStatus').innerHTML = '<span class="bad">Choose a pick for '+missing.title+'.</span>';
+          return;
+        }
+        if(!nickname()) throw new Error('Enter your name first.');
+        lock.disabled = true;
+        document.querySelector('#bonusStatus').textContent = 'Saving bonus predictions...';
+        await api('submit-bonus-predictions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname:nickname(),picks:p})});
+        localStorage.setItem(lockKey(), '1');
+        renderBonus();
+      }catch(e){
+        lock.disabled = false;
+        document.querySelector('#bonusStatus').innerHTML = '<span class="bad">'+e.message+'</span>';
       }
-      localStorage.setItem(lockKey(), '1');
-      renderBonus();
     };
 
     const clear = document.querySelector('#clearBonusBtn');
