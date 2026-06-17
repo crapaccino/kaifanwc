@@ -1,16 +1,16 @@
 (() => {
   const CATEGORIES = [
-    { key:'winner', title:'World Cup Winner', points:15, otherLabel:'Other team', options:[
-      {name:'France',chance:'16%'},{name:'England',chance:'14%'},{name:'Argentina',chance:'13%'},{name:'Spain',chance:'12%'},{name:'Brazil',chance:'11%'},{name:'Portugal',chance:'9%'},{name:'Germany',chance:'7%'},{name:'Netherlands',chance:'5%'},{name:'Uruguay',chance:'4%'},{name:'Belgium',chance:'3%'}
+    { key:'winner', title:'World Cup Winner', points:15, fieldLabel:'🌍 Any Other Team', options:[
+      {name:'France',label:'🇫🇷 France',chance:'18%'},{name:'England',label:'🏴 England',chance:'16%'},{name:'Spain',label:'🇪🇸 Spain',chance:'14%'},{name:'Argentina',label:'🇦🇷 Argentina',chance:'13%'},{name:'Brazil',label:'🇧🇷 Brazil',chance:'11%'},{name:'Any Other Team',label:'🌍 Any Other Team',chance:'28%',field:true}
     ]},
-    { key:'potm', title:'Player of the Tournament', points:10, otherLabel:'Other player', options:[
-      {name:'Kylian Mbappe',chance:'18%'},{name:'Jude Bellingham',chance:'12%'},{name:'Lamine Yamal',chance:'10%'},{name:'Vinicius Junior',chance:'9%'},{name:'Harry Kane',chance:'7%'},{name:'Rodri',chance:'7%'},{name:'Lionel Messi',chance:'6%'},{name:'Jamal Musiala',chance:'5%'},{name:'Florian Wirtz',chance:'4%'},{name:'Bukayo Saka',chance:'4%'},{name:'Phil Foden',chance:'3%'},{name:'Federico Valverde',chance:'3%'},{name:'Pedri',chance:'3%'},{name:'Julian Alvarez',chance:'2%'},{name:'Achraf Hakimi',chance:'2%'}
+    { key:'potm', title:'Player of the Tournament', points:10, fieldLabel:'👤 Any Other Player', options:[
+      {name:'Kylian Mbappe',label:'🇫🇷 Mbappé',chance:'18%'},{name:'Lamine Yamal',label:'🇪🇸 Yamal',chance:'15%'},{name:'Harry Kane',label:'🏴 Kane',chance:'13%'},{name:'Lionel Messi',label:'🇦🇷 Messi',chance:'12%'},{name:'Michael Olise',label:'🇫🇷 Olise',chance:'8%'},{name:'Any Other Player',label:'👤 Any Other Player',chance:'34%',field:true}
     ]},
-    { key:'golden_boot', title:'Golden Boot', points:10, otherLabel:'Other player', options:[
-      {name:'Kylian Mbappe',chance:'20%'},{name:'Harry Kane',chance:'13%'},{name:'Erling Haaland',chance:'12%'},{name:'Lionel Messi',chance:'8%'},{name:'Cristiano Ronaldo',chance:'7%'},{name:'Julian Alvarez',chance:'7%'},{name:'Vinicius Junior',chance:'6%'},{name:'Lautaro Martinez',chance:'5%'},{name:'Memphis Depay',chance:'4%'},{name:'Alvaro Morata',chance:'4%'}
+    { key:'golden_boot', title:'Golden Boot', points:10, fieldLabel:'👤 Any Other Player', options:[
+      {name:'Kylian Mbappe',label:'🇫🇷 Mbappé',chance:'20%'},{name:'Harry Kane',label:'🏴 Kane',chance:'15%'},{name:'Erling Haaland',label:'🇳🇴 Haaland',chance:'12%'},{name:'Lionel Messi',label:'🇦🇷 Messi',chance:'10%'},{name:'Kai Havertz',label:'🇩🇪 Havertz',chance:'8%'},{name:'Any Other Player',label:'👤 Any Other Player',chance:'35%',field:true}
     ]},
-    { key:'golden_glove', title:'Golden Glove', points:8, otherLabel:'Other goalkeeper', options:[
-      {name:'Mike Maignan',chance:'15%'},{name:'Jordan Pickford',chance:'13%'},{name:'Emiliano Martinez',chance:'12%'},{name:'Unai Simon',chance:'11%'},{name:'Alisson',chance:'10%'},{name:'Diogo Costa',chance:'8%'},{name:'Manuel Neuer',chance:'7%'},{name:'Gregor Kobel',chance:'6%'},{name:'Thibaut Courtois',chance:'5%'},{name:'Andries Noppert',chance:'4%'}
+    { key:'golden_glove', title:'Golden Glove', points:8, fieldLabel:'🧤 Any Other Goalkeeper', options:[
+      {name:'Mike Maignan',label:'🇫🇷 Maignan',chance:'16%'},{name:'Emiliano Martinez',label:'🇦🇷 Martínez',chance:'15%'},{name:'Jordan Pickford',label:'🏴 Pickford',chance:'13%'},{name:'Unai Simon',label:'🇪🇸 Unai Simón',chance:'12%'},{name:'Alisson Becker',label:'🇧🇷 Alisson',chance:'10%'},{name:'Any Other Goalkeeper',label:'🧤 Any Other Goalkeeper',chance:'34%',field:true}
     ]}
   ];
 
@@ -60,16 +60,12 @@
 
   function renderCategory(cat, picks, locked) {
     const val = picks[cat.key] || '';
-    const names = optionNames(cat);
-    const isOther = val && !names.includes(val);
     return '<div class="bonus-card" data-bonus-cat="'+cat.key+'">' +
       '<h3>'+cat.title+' — '+cat.points+' pts</h3>' +
-      '<p class="bonus-note">Favourites are sorted from most likely to least likely. Choose one, or use Other and type your own pick.</p>' +
+      '<p class="bonus-note">Choose one favourite, or pick the field option to cover everyone not listed.</p>' +
       '<div class="bonus-grid">' +
-      cat.options.map(opt => '<button type="button" class="bonus-option '+(val===opt.name?'active':'')+'" '+(locked?'disabled':'')+' data-bonus-pick="'+cat.key+'" data-value="'+opt.name+'"><span>'+opt.name+'</span><span class="bonus-rank">'+opt.chance+'</span></button>').join('') +
-      '<button type="button" class="bonus-option '+(isOther?'active':'')+'" '+(locked?'disabled':'')+' data-bonus-other="'+cat.key+'"><span>Other</span><span class="bonus-rank">manual</span></button>' +
+      cat.options.map(opt => '<button type="button" class="bonus-option '+(val===opt.name?'active':'')+'" '+(locked?'disabled':'')+' data-bonus-pick="'+cat.key+'" data-value="'+opt.name+'"><span>'+opt.label+'</span><span class="bonus-rank">'+opt.chance+'</span></button>').join('') +
       '</div>' +
-      '<div class="bonus-other-wrap '+(isOther?'show':'')+'" data-other-wrap="'+cat.key+'"><input '+(locked?'disabled':'')+' data-other-input="'+cat.key+'" placeholder="'+cat.otherLabel+'" value="'+(isOther?val.replace(/"/g,'&quot;'):'')+'"></div>' +
       '</div>';
   }
 
@@ -95,20 +91,6 @@
       p[btn.dataset.bonusPick] = btn.dataset.value;
       writePicks(p);
       renderBonus();
-    });
-
-    document.querySelectorAll('[data-bonus-other]').forEach(btn => btn.onclick = () => {
-      const key = btn.dataset.bonusOther;
-      const wrap = document.querySelector('[data-other-wrap="'+key+'"]');
-      const input = document.querySelector('[data-other-input="'+key+'"]');
-      if (wrap) wrap.classList.add('show');
-      if (input) { input.focus(); input.oninput(); }
-    });
-
-    document.querySelectorAll('[data-other-input]').forEach(input => input.oninput = () => {
-      const p = readPicks();
-      p[input.dataset.otherInput] = input.value.trim();
-      writePicks(p);
     });
 
     const lock = document.querySelector('#lockBonusBtn');
