@@ -16,6 +16,7 @@
 
   let deadline = null;
   let syncing = false;
+  const SAVE_ENDPOINT = 'bonus-predictions';
   const storeKey = () => 'kaifanwc_bonus_' + (localStorage.getItem('kaifanwc_name') || 'guest');
   const lockKey = () => storeKey() + '_locked';
   const readPicks = () => { try { return JSON.parse(localStorage.getItem(storeKey()) || '{}'); } catch (_) { return {}; } };
@@ -57,15 +58,17 @@
     }catch(_){ }
   }
 
+  async function savePicks(p){
+    return api(SAVE_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname:nickname(),picks:p})});
+  }
+
   async function syncLockedPicks(){
     if(syncing || !isLocked() || isClosed() || !nickname()) return;
     const p = readPicks();
     const missing = CATEGORIES.find(c => !p[c.key] || !String(p[c.key]).trim());
     if(missing) return;
     syncing = true;
-    try{
-      await api('submit-bonus-predictions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname:nickname(),picks:p})});
-    }catch(_){ } finally { syncing = false; }
+    try{ await savePicks(p); }catch(_){ } finally { syncing = false; }
   }
 
   function ensureTab() {
@@ -123,7 +126,7 @@
           if(!nickname()) throw new Error('Enter your name first.');
           lock.disabled = true;
           document.querySelector('#bonusStatus').textContent = 'Saving bonus predictions...';
-          await api('submit-bonus-predictions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname:nickname(),picks:p})});
+          await savePicks(p);
           localStorage.setItem(lockKey(), '1');
           renderBonus();
         }catch(e){ lock.disabled = false; document.querySelector('#bonusStatus').innerHTML = '<span class="bad">'+e.message+'</span>'; }
