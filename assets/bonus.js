@@ -81,16 +81,31 @@
     const leader = tabs.querySelector('[data-tab="leaderboard"]');
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.textContent = 'Predictions';
+    btn.textContent = isLocked() ? 'Predictions 🔒' : 'Predictions';
     btn.setAttribute('data-bonus-tab','bonus');
     btn.onclick = renderBonus;
     if (leader) tabs.insertBefore(btn, leader); else tabs.appendChild(btn);
+  }
+
+  function updateTabLabel(){
+    const b = document.querySelector('[data-bonus-tab="bonus"]');
+    if(b) b.textContent = isLocked() ? 'Predictions 🔒' : 'Predictions';
   }
 
   function clearActiveTabs() {
     document.querySelectorAll('#roundTabs button').forEach(b => b.classList.remove('active'));
     const b = document.querySelector('[data-bonus-tab="bonus"]');
     if (b) b.classList.add('active');
+  }
+
+  function selectedSummary(picks){
+    if(!isLocked()) return '';
+    const rows = CATEGORIES.map(cat => {
+      const opt = cat.options.find(o => o.name === picks[cat.key]);
+      if(!opt) return '';
+      return '<div class="bonus-locked-row"><span>'+cat.title+'</span><b>'+(opt.code ? '<span class="bonus-option-main">'+pickLabel(opt)+'</span>' : opt.label)+'</b></div>';
+    }).join('');
+    return '<div class="bonus-card bonus-locked-summary"><h2>🔒 Tournament Predictions Locked</h2><p class="bonus-note">Your tournament picks are saved and can no longer be changed.</p>'+rows+'</div>';
   }
 
   function renderCategory(cat, picks, locked) {
@@ -105,6 +120,7 @@
 
   function renderBonus() {
     try{
+      updateTabLabel();
       clearActiveTabs();
       const matches = document.querySelector('#matches');
       const submitBtn = document.querySelector('#submitBtn');
@@ -115,9 +131,9 @@
       if(isLocked()) syncLockedPicks();
       const deadlineText = deadline ? 'Deadline: '+safeDateText(deadline)+' Kuwait time.' : 'Deadline: first kickoff of Round 2.';
       const closedText = isClosed() ? '<p class="bonus-status"><span class="bad">Bonus predictions are closed.</span></p>' : '';
-      matches.innerHTML = '<div class="bonus-card"><h2>Bonus Predictions</h2><p class="bonus-note">One-time tournament picks. '+deadlineText+'</p>'+closedText+'</div>' +
+      matches.innerHTML = selectedSummary(picks) + '<div class="bonus-card"><h2>'+(isLocked()?'Bonus Predictions 🔒':'Bonus Predictions')+'</h2><p class="bonus-note">One-time tournament picks. '+deadlineText+'</p>'+closedText+'</div>' +
         CATEGORIES.map(c => renderCategory(c, picks, locked)).join('') +
-        '<div class="bonus-card"><div class="bonus-actions"><button id="lockBonusBtn" '+(locked?'disabled':'')+'>'+(isLocked()?'Bonus predictions locked':(isClosed()?'Predictions closed':'Lock bonus predictions'))+'</button><button id="clearBonusBtn" class="secondary" '+(locked?'disabled':'')+'>Clear bonus picks</button></div><p class="bonus-status" id="bonusStatus">'+(isLocked()?'<span class="ok">Your bonus predictions are locked and visible on the leaderboard.</span>':(isClosed()?'<span class="bad">The Round 2 deadline has passed.</span>':'Pick all 4 categories, then lock them in.'))+'</p></div>';
+        '<div class="bonus-card"><div class="bonus-actions"><button id="lockBonusBtn" '+(locked?'disabled':'')+'>'+(isLocked()?'🔒 Tournament Predictions Locked':(isClosed()?'Predictions closed':'Lock bonus predictions'))+'</button><button id="clearBonusBtn" class="secondary" '+(locked?'disabled':'')+'>Clear bonus picks</button></div><p class="bonus-status" id="bonusStatus">'+(isLocked()?'<span class="ok">🔒 Your tournament predictions are locked and visible on the leaderboard.</span>':(isClosed()?'<span class="bad">The Round 2 deadline has passed.</span>':'Pick all 4 categories, then lock them in.'))+'</p></div>';
       if (locked) return;
       document.querySelectorAll('[data-bonus-pick]').forEach(btn => btn.onclick = () => { const p = readPicks(); p[btn.dataset.bonusPick] = btn.dataset.value; writePicks(p); renderBonus(); });
       const lock = document.querySelector('#lockBonusBtn');
@@ -132,11 +148,12 @@
           document.querySelector('#bonusStatus').textContent = 'Saving bonus predictions...';
           await savePicks(p);
           localStorage.setItem(lockKey(), '1');
+          updateTabLabel();
           renderBonus();
         }catch(e){ lock.disabled = false; document.querySelector('#bonusStatus').innerHTML = '<span class="bad">'+e.message+'</span>'; }
       };
       const clear = document.querySelector('#clearBonusBtn');
-      if (clear) clear.onclick = () => { localStorage.removeItem(storeKey()); localStorage.removeItem(lockKey()); renderBonus(); };
+      if (clear) clear.onclick = () => { localStorage.removeItem(storeKey()); localStorage.removeItem(lockKey()); updateTabLabel(); renderBonus(); };
     }catch(e){
       const matches = document.querySelector('#matches');
       if(matches) matches.innerHTML = '<div class="bonus-card"><h2>Bonus Predictions</h2><p class="bonus-status"><span class="bad">'+e.message+'</span></p></div>';
@@ -147,9 +164,10 @@
     await loadDeadline();
     await loadRemoteBonus();
     ensureTab();
+    updateTabLabel();
     const tabs = document.querySelector('#roundTabs');
-    if (tabs) new MutationObserver(ensureTab).observe(tabs, { childList:true });
-    setInterval(()=>{ const b=document.querySelector('[data-bonus-tab="bonus"]'); if(b && b.classList.contains('active')) renderBonus(); }, 30000);
+    if (tabs) new MutationObserver(()=>{ensureTab(); updateTabLabel();}).observe(tabs, { childList:true });
+    setInterval(()=>{ updateTabLabel(); const b=document.querySelector('[data-bonus-tab="bonus"]'); if(b && b.classList.contains('active')) renderBonus(); }, 30000);
   }
   window.addEventListener('load', start);
 })();
