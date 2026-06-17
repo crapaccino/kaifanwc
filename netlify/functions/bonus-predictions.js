@@ -61,17 +61,24 @@ exports.handler = async (event) => {
       player = newPlayer;
     }
 
+    const { error: deleteErr } = await sb
+      .from('bonus_predictions')
+      .delete()
+      .eq('player_id', player.id);
+
+    if (deleteErr) throw deleteErr;
+
     const rows = CATEGORIES.map(category => ({
       player_id: player.id,
       category,
       pick: cleanPick(picks[category])
     }));
 
-    const { error } = await sb
+    const { error: insertErr } = await sb
       .from('bonus_predictions')
-      .upsert(rows, { onConflict: 'player_id,category' });
+      .insert(rows);
 
-    if (error) throw error;
+    if (insertErr) throw insertErr;
 
     return json(200, { ok: true, saved: rows.length, bonus_predictions: rows });
   } catch (e) {
