@@ -43,13 +43,21 @@
   }
   function fixDeadlineText(){
     const notice=document.querySelector('.round-lock.open-notice');
-    if(!notice)return;
+    if(!notice || notice.dataset.fixedDeadline==='1')return;
     const text=notice.textContent||'';
+    if(text.indexOf('Picks become final')===-1)return;
     const match=text.match(/Deadline:\s*(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4}),\s*(\d{2}):(\d{2})\s+Kuwait time/);
     if(!match)return;
-    const hour=String(Number(match[4])-2).padStart(2,'0');
-    const fixed='Deadline: '+match[1]+' '+match[2]+' '+match[3]+', '+hour+':'+match[5]+' Kuwait time';
+    const months={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+    const month=months[match[2]];
+    if(month===undefined)return;
+    const d=new Date(Date.UTC(Number(match[3]),month,Number(match[1]),Number(match[4])-2,Number(match[5])));
+    const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
+    const hour=String(d.getUTCHours()).padStart(2,'0');
+    const minute=String(d.getUTCMinutes()).padStart(2,'0');
+    const fixed='Deadline: '+d.getUTCDate()+' '+mon+' '+d.getUTCFullYear()+', '+hour+':'+minute+' Kuwait time';
     notice.textContent=text.replace(/Picks become final when you press Lock in picks\./,'Picks close 2 hours before the first kickoff.').replace(match[0],fixed);
+    notice.dataset.fixedDeadline='1';
   }
   function inject(){
     document.querySelectorAll('.match').forEach(match=>{
