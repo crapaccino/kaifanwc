@@ -1,22 +1,49 @@
 const { client, json, scorePrediction } = require('./_supabase');
+
 exports.handler = async () => {
   try {
     const sb = client();
-    const [{ data: matches, error: mErr }, { data: players, error: pErr }, { data: predictions, error: prErr }] = await Promise.all([
+    const [matchesRes, playersRes, predictionsRes, bonusRes] = await Promise.all([
       sb.from('matches').select('*').eq('is_active', true).order('kickoff', { ascending: true }),
       sb.from('players').select('*').order('nickname'),
-      sb.from('predictions').select('*')
+      sb.from('predictions').select('*'),
+      sb.from('bonus_predictions').select('*')
     ]);
-    if (mErr || pErr || prErr) throw (mErr || pErr || prErr);
+
+    if (matchesRes.error || playersRes.error || predictionsRes.error || bonusRes.error) {
+      throw (matchesRes.error || playersRes.error || predictionsRes.error || bonusRes.error);
+    }
+
+    const matches = matchesRes.data || [];
+    const players = playersRes.data || [];
+    const predictions = predictionsRes.data || [];
+    const bonusRows = bonusRes.data || [];
+
     const matchMap = Object.fromEntries(matches.map(m => [m.id, m]));
+    const bonusByPlayer = {};
+    bonusRows.forEach(b => {
+      if (!bonusByPlayer[b.player_id]) bonusByPlayer[b.player_id] = {};
+      bonusByPlayer[b.player_id][b.category] = b.pick;
+    });
+
     const leaderboard = players.map(p => {
       const mine = predictions.filter(x => x.player_id === p.id);
       return {
+        player_id: p.id,
         nickname: p.nickname,
         predictions: mine.length,
-        points: mine.reduce((sum, x) => sum + scorePrediction(x, matchMap[x.match_id] || {}), 0)
+        points: mine.reduce((sum, x) => sum + scorePrediction(x, matchMap[x.match_id] || {}), 0),
+        bonus: bonusByPlayer[p.id] || {}
       };
     }).sort((a,b)=>b.points-a.points || b.predictions-a.predictions || a.nickname.localeCompare(b.nickname));
-    return json(200, { matches, leaderboard });
-  } catch (e) { return json(500, { error: e.message }); }
+
+    const bonus_predictions = bonusRows.map(b => {
+      const player = players.find(p => p.id === b.player_id);
+      return { nickname: player ? player.nickname : '', category: b.category, pick: b.pick, created_at: b.created_at };
+    });
+
+    return json(200, { matches, leaderboard, bonus_predictions });
+  } catch (e) {
+    return json(500, { error: e.message });
+  }
 };
