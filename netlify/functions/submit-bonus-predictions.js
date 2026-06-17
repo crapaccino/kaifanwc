@@ -61,24 +61,16 @@ exports.handler = async (event) => {
       player = newPlayer;
     }
 
-    const { data: existingBonus, error: existingErr } = await sb
-      .from('bonus_predictions')
-      .select('id')
-      .eq('player_id', player.id)
-      .limit(1);
-
-    if (existingErr) throw existingErr;
-    if (existingBonus && existingBonus.length) {
-      return json(400, { error: 'You have already locked in bonus predictions. They are final once submitted.' });
-    }
-
     const rows = CATEGORIES.map(category => ({
       player_id: player.id,
       category,
       pick: cleanPick(picks[category])
     }));
 
-    const { error } = await sb.from('bonus_predictions').insert(rows);
+    const { error } = await sb
+      .from('bonus_predictions')
+      .upsert(rows, { onConflict: 'player_id,category' });
+
     if (error) throw error;
 
     return json(200, { ok: true, saved: rows.length, bonus_predictions: rows });
