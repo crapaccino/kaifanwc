@@ -9,8 +9,8 @@
   const compact = v => SHORT[v] || (v || '-');
   async function addBoard(){
     const target = document.querySelector('.leaderboard-tab');
-    if(!target || target.querySelector('.bonus-board')) return;
-    const res = await fetch('/.netlify/functions/get-state');
+    if(!target) return;
+    const res = await fetch('/.netlify/functions/get-state?ts=' + Date.now());
     const data = await res.json();
     const grouped = {};
     (data.bonus_predictions || []).forEach(x => {
@@ -22,7 +22,13 @@
       const p = grouped[name];
       return '<tr><td><b>'+pretty(name)+'</b></td><td>'+compact(p.winner)+'</td><td>'+compact(p.potm)+'</td><td>'+compact(p.golden_boot)+'</td><td>'+compact(p.golden_glove)+'</td></tr>';
     }).join('') || '<tr><td colspan="5">No bonus predictions locked yet.</td></tr>';
-    target.insertAdjacentHTML('beforeend','<div class="bonus-card bonus-board"><h2>Tournament Predictions</h2><p class="bonus-note">Locked bonus picks. 🌍 Other = any unlisted team, 👤 Other = any unlisted player, 🧤 Other = any unlisted goalkeeper.</p><table><thead><tr><th>Name</th><th>Winner</th><th>POTM</th><th>Boot</th><th>Glove</th></tr></thead><tbody>'+body+'</tbody></table></div>');
+    const html = '<h2>Tournament Predictions</h2><p class="bonus-note">Locked bonus picks. 🌍 Other = any unlisted team, 👤 Other = any unlisted player, 🧤 Other = any unlisted goalkeeper.</p><table><thead><tr><th>Name</th><th>Winner</th><th>POTM</th><th>Boot</th><th>Glove</th></tr></thead><tbody>'+body+'</tbody></table>';
+    let board = target.querySelector('.bonus-board');
+    if(!board){
+      target.insertAdjacentHTML('beforeend','<div class="bonus-card bonus-board">'+html+'</div>');
+    }else{
+      board.innerHTML = html;
+    }
   }
-  window.addEventListener('load', () => { setInterval(addBoard, 1000); addBoard(); });
+  window.addEventListener('load', () => { setInterval(addBoard, 3000); addBoard(); });
 })();
