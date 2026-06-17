@@ -15,13 +15,13 @@
   ];
 
   let deadline = null;
+  let syncing = false;
   const storeKey = () => 'kaifanwc_bonus_' + (localStorage.getItem('kaifanwc_name') || 'guest');
   const lockKey = () => storeKey() + '_locked';
   const readPicks = () => { try { return JSON.parse(localStorage.getItem(storeKey()) || '{}'); } catch (_) { return {}; } };
   const writePicks = p => localStorage.setItem(storeKey(), JSON.stringify(p));
   const isLocked = () => localStorage.getItem(lockKey()) === '1';
   const nickname = () => String(localStorage.getItem('kaifanwc_name') || '').trim().toLowerCase();
-  const optionNames = cat => cat.options.map(o => o.name);
   const fmtFull = d => new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kuwait',dateStyle:'medium',timeStyle:'short'}).format(new Date(d));
   const isClosed = () => deadline && Date.now() >= deadline.getTime();
 
@@ -38,6 +38,35 @@
       const games = (state.matches || []).filter(m => String(m.round || '').toLowerCase().includes('round 2')).sort((a,b)=>new Date(a.kickoff)-new Date(b.kickoff));
       deadline = games[0] ? new Date(games[0].kickoff) : null;
     }catch(_){ deadline = null; }
+  }
+
+  async function loadRemoteBonus(){
+    const name = nickname();
+    if(!name) return;
+    try{
+      const player = await api('get-player?nickname=' + encodeURIComponent(name));
+      const rows = player.bonus_predictions || [];
+      if(rows.length){
+        const remote = {};
+        rows.forEach(r => remote[r.category] = r.pick);
+        writePicks(remote);
+        localStorage.setItem(lockKey(), '1');
+      }
+    }catch(_){ }
+  }
+
+  async function syncLockedPicks(){
+    if(syncing || !isLocked() || isClosed() || !nickname()) return;
+    const p = readPicks();
+    const missing = CATEGORIES.find(c => !p[c.key] || !String(p[c.key]).trim());
+    if(missing) return;
+    syncing = true;
+    try{
+      await api('submit-bonus-predictions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname:nickname(),picks:p})});
+    }catch(_){
+    }finally{
+      syncing = false;
+    }
   }
 
   function ensureTab() {
@@ -78,11 +107,12 @@
 
     const picks = readPicks();
     const locked = isLocked() || isClosed();
+    if(isLocked()) syncLockedPicks();
     const deadlineText = deadline ? 'Deadline: '+fmtFull(deadline)+' Kuwait time.' : 'Deadline: first kickoff of Round 2.';
     const closedText = isClosed() ? '<p class="bonus-status"><span class="bad">Bonus predictions are closed.</span></p>' : '';
     matches.innerHTML = '<div class="bonus-card"><h2>Bonus Predictions</h2><p class="bonus-note">One-time tournament picks. They close when the first game of Round 2 kicks off. '+deadlineText+'</p>'+closedText+'</div>' +
       CATEGORIES.map(c => renderCategory(c, picks, locked)).join('') +
-      '<div class="bonus-card"><div class="bonus-actions"><button id="lockBonusBtn" '+(locked?'disabled':'')+'>'+(isLocked()?'Bonus predictions locked':(isClosed()?'Predictions closed':'Lock bonus predictions'))+'</button><button id="clearBonusBtn" class="secondary" '+(locked?'disabled':'')+'>Clear bonus picks</button></div><p class="bonus-status" id="bonusStatus">'+(isLocked()?'<span class="ok">Your bonus predictions are locked.</span>':(isClosed()?'<span class="bad">The Round 2 deadline has passed.</span>':'Pick all 4 categories, then lock them in.'))+'</p></div>';
+      '<div class="bonus-card"><div class="bonus-actions"><button id="lockBonusBtn" '+(locked?'disabled':'')+'>'+(isLocked()?'Bonus predictions locked':(isClosed()?'Predictions closed':'Lock bonus predictions'))+'</button><button id="clearBonusBtn" class="secondary" '+(locked?'disabled':'')+'>Clear bonus picks</button></div><p class="bonus-status" id="bonusStatus">'+(isLocked()?'<span class="ok">Your bonus predictions are locked and visible on the leaderboard.</span>':(isClosed()?'<span class="bad">The Round 2 deadline has passed.</span>':'Pick all 4 categories, then lock them in.'))+'</p></div>';
 
     if (locked) return;
 
@@ -121,6 +151,7 @@
 
   async function start() {
     await loadDeadline();
+    await loadRemoteBonus();
     ensureTab();
     const tabs = document.querySelector('#roundTabs');
     if (tabs) new MutationObserver(ensureTab).observe(tabs, { childList:true });
