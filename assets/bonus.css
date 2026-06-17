@@ -1,0 +1,13 @@
+.bonus-card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:16px;margin:14px 0;box-shadow:0 8px 22px rgba(18,26,48,.08)}
+.bonus-card h2{margin:0 0 6px;color:var(--accent);font-size:22px}
+.bonus-card h3{margin:0 0 10px;color:var(--accent);font-size:17px}
+.bonus-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
+.bonus-option{background:#f1f4fa;color:var(--text);border:1px solid var(--line);min-height:48px;border-radius:14px;font-weight:800;padding:10px 12px;text-align:left;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.bonus-option.active{background:linear-gradient(135deg,#ffd166,#f7b731);border-color:#f0b429;color:#1b1300}
+.bonus-rank{color:var(--muted);font-size:12px;font-weight:900;white-space:nowrap}
+.bonus-other-wrap{display:none;margin-top:10px}
+.bonus-other-wrap.show{display:block}
+.bonus-note{font-size:12px;color:var(--muted);margin:8px 0 0;line-height:1.4}
+.bonus-actions{margin-top:16px;display:grid;grid-template-columns:1fr;gap:10px}
+.bonus-status{font-size:13px;margin-top:8px}
+@media(min-width:700px){.bonus-grid{grid-template-columns:1fr 1fr}.bonus-actions{grid-template-columns:1fr 1fr}}
