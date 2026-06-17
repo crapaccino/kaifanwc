@@ -10,22 +10,23 @@ exports.handler = async (event) => {
     if (!nickname) return json(400, { error: 'Nickname required' });
 
     const sb = client();
-    const { data: player, error } = await sb
+    const playerRes = await sb
       .from('players')
       .select('*')
       .ilike('nickname', nickname)
       .maybeSingle();
 
-    if (error) throw error;
-    if (!player) return json(200, { player: null, predictions: [] });
+    if (playerRes.error) throw playerRes.error;
+    const player = playerRes.data;
+    if (!player) return json(200, { player: null, predictions: [], bonus_predictions: [] });
 
-    const { data: predictions, error: pErr } = await sb
-      .from('predictions')
-      .select('*')
-      .eq('player_id', player.id);
+    const predRes = await sb.from('predictions').select('*').eq('player_id', player.id);
+    if (predRes.error) throw predRes.error;
 
-    if (pErr) throw pErr;
-    return json(200, { player, predictions });
+    const bonusRes = await sb.from('bonus_predictions').select('*').eq('player_id', player.id);
+    if (bonusRes.error) throw bonusRes.error;
+
+    return json(200, { player, predictions: predRes.data || [], bonus_predictions: bonusRes.data || [] });
   } catch (e) {
     return json(500, { error: e.message });
   }
