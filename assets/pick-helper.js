@@ -41,6 +41,16 @@
     const p=percentModel(home,away), scores=expectedScores(home,away,p);
     return '<div class="pick-helper-card" data-helper="1"><div class="helper-title">Match insight</div><div class="helper-edge">'+edge(p)+' - estimated from team strength</div>'+row(home,p.home)+row('Draw',p.draw)+row(away,p.away)+'<div class="helper-scores"><span>Common scores</span><b>'+scores.join(' / ')+'</b></div><div class="helper-note">Use this as a simple guide, not a guarantee.</div></div>';
   }
+  function fixDeadlineText(){
+    const notice=document.querySelector('.round-lock.open-notice');
+    if(!notice)return;
+    const text=notice.textContent||'';
+    const match=text.match(/Deadline:\s*(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4}),\s*(\d{2}):(\d{2})\s+Kuwait time/);
+    if(!match)return;
+    const hour=String(Number(match[4])-2).padStart(2,'0');
+    const fixed='Deadline: '+match[1]+' '+match[2]+' '+match[3]+', '+hour+':'+match[5]+' Kuwait time';
+    notice.textContent=text.replace(/Picks become final when you press Lock in picks\./,'Picks close 2 hours before the first kickoff.').replace(match[0],fixed);
+  }
   function inject(){
     document.querySelectorAll('.match').forEach(match=>{
       if(match.querySelector('[data-helper="1"]'))return;
@@ -50,6 +60,7 @@
       if(!home||!away||!info)return;
       info.insertAdjacentHTML('afterend',card(home,away));
     });
+    fixDeadlineText();
   }
   function start(){
     const target=document.querySelector('#matches');
