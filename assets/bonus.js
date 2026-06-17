@@ -1,16 +1,20 @@
 (() => {
+  const FLAG_CODES = { France:'fr', England:'gb-eng', Spain:'es', Argentina:'ar', Brazil:'br', Norway:'no', Germany:'de' };
+  const flagImg = code => code ? '<img class="team-flag-img" src="https://flagcdn.com/'+code+'.svg" alt="" loading="lazy">' : '';
+  const pickLabel = opt => opt.code ? '<span class="pick-label-flag">'+flagImg(opt.code)+'</span><span>'+opt.label+'</span>' : '<span>'+opt.label+'</span>';
+
   const CATEGORIES = [
     { key:'winner', title:'World Cup Winner', points:15, options:[
-      {name:'France',label:'🇫🇷 France',chance:'18%'},{name:'England',label:'🏴 England',chance:'16%'},{name:'Spain',label:'🇪🇸 Spain',chance:'14%'},{name:'Argentina',label:'🇦🇷 Argentina',chance:'13%'},{name:'Brazil',label:'🇧🇷 Brazil',chance:'11%'},{name:'Any Other Team',label:'🌍 Any Other Team',chance:'28%'}
+      {name:'France',label:'France',code:FLAG_CODES.France,chance:'18%'},{name:'England',label:'England',code:FLAG_CODES.England,chance:'16%'},{name:'Spain',label:'Spain',code:FLAG_CODES.Spain,chance:'14%'},{name:'Argentina',label:'Argentina',code:FLAG_CODES.Argentina,chance:'13%'},{name:'Brazil',label:'Brazil',code:FLAG_CODES.Brazil,chance:'11%'},{name:'Any Other Team',label:'Any Other Team',chance:'28%'}
     ]},
     { key:'potm', title:'Player of the Tournament', points:10, options:[
-      {name:'Kylian Mbappe',label:'🇫🇷 Mbappé',chance:'18%'},{name:'Lamine Yamal',label:'🇪🇸 Yamal',chance:'15%'},{name:'Harry Kane',label:'🏴 Kane',chance:'13%'},{name:'Lionel Messi',label:'🇦🇷 Messi',chance:'12%'},{name:'Michael Olise',label:'🇫🇷 Olise',chance:'8%'},{name:'Any Other Player',label:'👤 Any Other Player',chance:'34%'}
+      {name:'Kylian Mbappe',label:'Mbappé',code:FLAG_CODES.France,chance:'18%'},{name:'Lamine Yamal',label:'Yamal',code:FLAG_CODES.Spain,chance:'15%'},{name:'Harry Kane',label:'Kane',code:FLAG_CODES.England,chance:'13%'},{name:'Lionel Messi',label:'Messi',code:FLAG_CODES.Argentina,chance:'12%'},{name:'Michael Olise',label:'Olise',code:FLAG_CODES.France,chance:'8%'},{name:'Any Other Player',label:'Any Other Player',chance:'34%'}
     ]},
     { key:'golden_boot', title:'Golden Boot', points:10, options:[
-      {name:'Kylian Mbappe',label:'🇫🇷 Mbappé',chance:'20%'},{name:'Harry Kane',label:'🏴 Kane',chance:'15%'},{name:'Erling Haaland',label:'🇳🇴 Haaland',chance:'12%'},{name:'Lionel Messi',label:'🇦🇷 Messi',chance:'10%'},{name:'Kai Havertz',label:'🇩🇪 Havertz',chance:'8%'},{name:'Any Other Player',label:'👤 Any Other Player',chance:'35%'}
+      {name:'Kylian Mbappe',label:'Mbappé',code:FLAG_CODES.France,chance:'20%'},{name:'Harry Kane',label:'Kane',code:FLAG_CODES.England,chance:'15%'},{name:'Erling Haaland',label:'Haaland',code:FLAG_CODES.Norway,chance:'12%'},{name:'Lionel Messi',label:'Messi',code:FLAG_CODES.Argentina,chance:'10%'},{name:'Kai Havertz',label:'Havertz',code:FLAG_CODES.Germany,chance:'8%'},{name:'Any Other Player',label:'Any Other Player',chance:'35%'}
     ]},
     { key:'golden_glove', title:'Golden Glove', points:8, options:[
-      {name:'Mike Maignan',label:'🇫🇷 Maignan',chance:'16%'},{name:'Emiliano Martinez',label:'🇦🇷 Martínez',chance:'15%'},{name:'Jordan Pickford',label:'🏴 Pickford',chance:'13%'},{name:'Unai Simon',label:'🇪🇸 Unai Simón',chance:'12%'},{name:'Alisson Becker',label:'🇧🇷 Alisson',chance:'10%'},{name:'Any Other Goalkeeper',label:'🧤 Any Other Goalkeeper',chance:'34%'}
+      {name:'Mike Maignan',label:'Maignan',code:FLAG_CODES.France,chance:'16%'},{name:'Emiliano Martinez',label:'Martínez',code:FLAG_CODES.Argentina,chance:'15%'},{name:'Jordan Pickford',label:'Pickford',code:FLAG_CODES.England,chance:'13%'},{name:'Unai Simon',label:'Unai Simón',code:FLAG_CODES.Spain,chance:'12%'},{name:'Alisson Becker',label:'Alisson',code:FLAG_CODES.Brazil,chance:'10%'},{name:'Any Other Goalkeeper',label:'Any Other Goalkeeper',chance:'34%'}
     ]}
   ];
 
@@ -95,7 +99,7 @@
       '<h3>'+cat.title+' — '+cat.points+' pts</h3>' +
       '<p class="bonus-note">Choose one favourite, or pick the field option to cover everyone not listed.</p>' +
       '<div class="bonus-grid">' +
-      cat.options.map(opt => '<button type="button" class="bonus-option '+(val===opt.name?'active':'')+'" '+(locked?'disabled':'')+' data-bonus-pick="'+cat.key+'" data-value="'+opt.name+'"><span>'+opt.label+'</span><span class="bonus-rank">'+opt.chance+'</span></button>').join('') +
+      cat.options.map(opt => '<button type="button" class="bonus-option '+(val===opt.name?'active':'')+'" '+(locked?'disabled':'')+' data-bonus-pick="'+cat.key+'" data-value="'+opt.name+'"><span class="bonus-option-main">'+pickLabel(opt)+'</span><span class="bonus-rank">'+opt.chance+'</span></button>').join('') +
       '</div></div>';
   }
 
