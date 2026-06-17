@@ -11,17 +11,16 @@
   <main class="wrap">
     <section id="welcomeScreen" class="welcome-screen">
       <div class="welcome-card">
-        <div class="welcome-logo">🏆</div>
+        <div class="welcome-logo">Trophy</div>
         <p class="welcome-kicker">KAIFAN</p>
         <h1>World Cup Predictor</h1>
         <p class="welcome-copy">Enter your name to start predicting and climb the leaderboard.</p>
         <input id="welcomeName" placeholder="Your name" autocomplete="name">
         <button id="continueBtn">Continue</button>
-        <p class="welcome-note">🔒 Once you lock in picks, your name and picks are final for that round.</p>
+        <p class="welcome-note">Once you lock in picks, your name and picks are final for that round.</p>
         <p class="small" id="welcomeStatus"></p>
       </div>
     </section>
-
     <section id="appScreen" class="card app-hidden">
       <header class="app-header">
         <div>
@@ -31,20 +30,13 @@
         </div>
         <button id="changeNameBtn" class="secondary change-name-btn">Change name</button>
       </header>
-
       <div class="tabs" id="roundTabs"></div>
       <div id="matches"></div>
-
-      <div class="action-bar">
-        <button id="submitBtn">Lock in picks</button>
-      </div>
-
+      <div class="action-bar"><button id="submitBtn">Lock in picks</button></div>
       <p class="small" id="status"></p>
     </section>
   </main>
-
   <script type="module" src="/assets/app.js"></script>
   <script src="/assets/pick-helper.js"></script>
-  <script src="/assets/lock-ui.js"></script>
 </body>
 </html>
