@@ -22,9 +22,9 @@
     const names = Object.keys(grouped).sort();
     const body = names.map(name => {
       const p = grouped[name];
-      return '<tr><td><b>'+pretty(name)+'</b></td><td>'+compact(p.winner)+'</td><td>'+compact(p.potm)+'</td><td>'+compact(p.golden_boot)+'</td><td>'+compact(p.golden_glove)+'</td></tr>';
+      return '<tr><td><b>'+pretty(name)+'</b> <span title="Tournament predictions locked">🔒</span></td><td>'+compact(p.winner)+'</td><td>'+compact(p.potm)+'</td><td>'+compact(p.golden_boot)+'</td><td>'+compact(p.golden_glove)+'</td></tr>';
     }).join('') || '<tr><td colspan="5">No bonus predictions locked yet.</td></tr>';
-    const html = '<h2>Tournament Predictions</h2><p class="bonus-note">Locked bonus picks. Other = any unlisted team, player, or goalkeeper.</p><table><thead><tr><th>Name</th><th>Winner</th><th>POTM</th><th>Boot</th><th>Glove</th></tr></thead><tbody>'+body+'</tbody></table>';
+    const html = '<h2>🔒 Tournament Predictions</h2><p class="bonus-note">Locked bonus picks. Other = any unlisted team, player, or goalkeeper.</p><table><thead><tr><th>Name</th><th>Winner</th><th>POTM</th><th>Boot</th><th>Glove</th></tr></thead><tbody>'+body+'</tbody></table>';
     let board = target.querySelector('.bonus-board');
     if(!board){
       target.insertAdjacentHTML('beforeend','<div class="bonus-card bonus-board">'+html+'</div>');
