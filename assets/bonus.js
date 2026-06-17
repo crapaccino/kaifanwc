@@ -14,6 +14,7 @@
     ]}
   ];
 
+  let deadline = null;
   const storeKey = () => 'kaifanwc_bonus_' + (localStorage.getItem('kaifanwc_name') || 'guest');
   const lockKey = () => storeKey() + '_locked';
   const readPicks = () => { try { return JSON.parse(localStorage.getItem(storeKey()) || '{}'); } catch (_) { return {}; } };
@@ -21,12 +22,22 @@
   const isLocked = () => localStorage.getItem(lockKey()) === '1';
   const nickname = () => String(localStorage.getItem('kaifanwc_name') || '').trim().toLowerCase();
   const optionNames = cat => cat.options.map(o => o.name);
+  const fmtFull = d => new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kuwait',dateStyle:'medium',timeStyle:'short'}).format(new Date(d));
+  const isClosed = () => deadline && Date.now() >= deadline.getTime();
 
   async function api(path, opts={}){
     const r = await fetch('/.netlify/functions/' + path, opts);
     const j = await r.json();
     if(!r.ok) throw new Error(j.error || 'Request failed');
     return j;
+  }
+
+  async function loadDeadline(){
+    try{
+      const state = await api('get-state');
+      const games = (state.matches || []).filter(m => String(m.round || '').toLowerCase().includes('round 2')).sort((a,b)=>new Date(a.kickoff)-new Date(b.kickoff));
+      deadline = games[0] ? new Date(games[0].kickoff) : null;
+    }catch(_){ deadline = null; }
   }
 
   function ensureTab() {
@@ -55,8 +66,8 @@
       '<h3>'+cat.title+' — '+cat.points+' pts</h3>' +
       '<p class="bonus-note">Favourites are sorted from most likely to least likely. Choose one, or use Other and type your own pick.</p>' +
       '<div class="bonus-grid">' +
-      cat.options.map(opt => '<button type="button" class="bonus-option '+(val===opt.name?'active':'')+'" data-bonus-pick="'+cat.key+'" data-value="'+opt.name+'"><span>'+opt.name+'</span><span class="bonus-rank">'+opt.chance+'</span></button>').join('') +
-      '<button type="button" class="bonus-option '+(isOther?'active':'')+'" data-bonus-other="'+cat.key+'"><span>Other</span><span class="bonus-rank">manual</span></button>' +
+      cat.options.map(opt => '<button type="button" class="bonus-option '+(val===opt.name?'active':'')+'" '+(locked?'disabled':'')+' data-bonus-pick="'+cat.key+'" data-value="'+opt.name+'"><span>'+opt.name+'</span><span class="bonus-rank">'+opt.chance+'</span></button>').join('') +
+      '<button type="button" class="bonus-option '+(isOther?'active':'')+'" '+(locked?'disabled':'')+' data-bonus-other="'+cat.key+'"><span>Other</span><span class="bonus-rank">manual</span></button>' +
       '</div>' +
       '<div class="bonus-other-wrap '+(isOther?'show':'')+'" data-other-wrap="'+cat.key+'"><input '+(locked?'disabled':'')+' data-other-input="'+cat.key+'" placeholder="'+cat.otherLabel+'" value="'+(isOther?val.replace(/"/g,'&quot;'):'')+'"></div>' +
       '</div>';
@@ -70,10 +81,12 @@
     if (!matches) return;
 
     const picks = readPicks();
-    const locked = isLocked();
-    matches.innerHTML = '<div class="bonus-card"><h2>Bonus Predictions</h2><p class="bonus-note">These are extra ways to win points. Percentages are simple guide estimates, not guarantees. Once you lock them in, they are final and visible on the leaderboard.</p></div>' +
+    const locked = isLocked() || isClosed();
+    const deadlineText = deadline ? 'Deadline: '+fmtFull(deadline)+' Kuwait time.' : 'Deadline: first kickoff of Round 2.';
+    const closedText = isClosed() ? '<p class="bonus-status"><span class="bad">Bonus predictions are closed.</span></p>' : '';
+    matches.innerHTML = '<div class="bonus-card"><h2>Bonus Predictions</h2><p class="bonus-note">One-time tournament picks. They close when the first game of Round 2 kicks off. '+deadlineText+'</p>'+closedText+'</div>' +
       CATEGORIES.map(c => renderCategory(c, picks, locked)).join('') +
-      '<div class="bonus-card"><div class="bonus-actions"><button id="lockBonusBtn" '+(locked?'disabled':'')+'>'+(locked?'Bonus predictions locked':'Lock bonus predictions')+'</button><button id="clearBonusBtn" class="secondary" '+(locked?'disabled':'')+'>Clear bonus picks</button></div><p class="bonus-status" id="bonusStatus">'+(locked?'<span class="ok">Your bonus predictions are locked.</span>':'Pick all 4 categories, then lock them in.')+'</p></div>';
+      '<div class="bonus-card"><div class="bonus-actions"><button id="lockBonusBtn" '+(locked?'disabled':'')+'>'+(isLocked()?'Bonus predictions locked':(isClosed()?'Predictions closed':'Lock bonus predictions'))+'</button><button id="clearBonusBtn" class="secondary" '+(locked?'disabled':'')+'>Clear bonus picks</button></div><p class="bonus-status" id="bonusStatus">'+(isLocked()?'<span class="ok">Your bonus predictions are locked.</span>':(isClosed()?'<span class="bad">The Round 2 deadline has passed.</span>':'Pick all 4 categories, then lock them in.'))+'</p></div>';
 
     if (locked) return;
 
@@ -101,6 +114,7 @@
     const lock = document.querySelector('#lockBonusBtn');
     if (lock) lock.onclick = async () => {
       try{
+        if(isClosed()) throw new Error('Bonus predictions are closed. The deadline was the first kickoff of Round 2.');
         const p = readPicks();
         const missing = CATEGORIES.find(c => !p[c.key] || !String(p[c.key]).trim());
         if (missing) {
@@ -123,10 +137,12 @@
     if (clear) clear.onclick = () => { localStorage.removeItem(storeKey()); renderBonus(); };
   }
 
-  function start() {
+  async function start() {
+    await loadDeadline();
     ensureTab();
     const tabs = document.querySelector('#roundTabs');
     if (tabs) new MutationObserver(ensureTab).observe(tabs, { childList:true });
+    setInterval(()=>{ if(document.querySelector('[data-bonus-tab="bonus"].active')) renderBonus(); }, 30000);
   }
 
   window.addEventListener('load', start);
