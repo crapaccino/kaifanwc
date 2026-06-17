@@ -10,6 +10,10 @@ function cleanPick(value) {
   return String(value || '').trim().replace(/\s+/g, ' ');
 }
 
+function isRoundTwo(round) {
+  return String(round || '').toLowerCase().includes('round 2');
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: 'POST only' });
 
@@ -24,6 +28,19 @@ exports.handler = async (event) => {
     if (missing) return json(400, { error: 'Please choose all bonus predictions before locking in.' });
 
     const sb = client();
+
+    const { data: roundTwoMatches, error: deadlineErr } = await sb
+      .from('matches')
+      .select('kickoff,round')
+      .eq('is_active', true)
+      .order('kickoff', { ascending: true });
+
+    if (deadlineErr) throw deadlineErr;
+
+    const firstRoundTwo = (roundTwoMatches || []).find(m => isRoundTwo(m.round));
+    if (firstRoundTwo && Date.now() >= new Date(firstRoundTwo.kickoff).getTime()) {
+      return json(400, { error: 'Bonus predictions are locked. The deadline was the first kickoff of Round 2.' });
+    }
 
     const { data: existingPlayer, error: findErr } = await sb
       .from('players')
