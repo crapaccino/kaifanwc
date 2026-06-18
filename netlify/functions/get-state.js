@@ -21,6 +21,10 @@ exports.handler = async () => {
     const bonusRows = bonusRes.data || [];
 
     const matchMap = Object.fromEntries(matches.map(m => [m.id, m]));
+    const roundName = match => String(match?.round || '').toLowerCase();
+    const isRound2 = match => /round\s*2/.test(roundName(match));
+    const isRound3 = match => /round\s*3/.test(roundName(match));
+
     const bonusByPlayer = {};
     bonusRows.forEach(b => {
       if (!bonusByPlayer[b.player_id]) bonusByPlayer[b.player_id] = {};
@@ -29,10 +33,14 @@ exports.handler = async () => {
 
     const leaderboard = players.map(p => {
       const mine = predictions.filter(x => x.player_id === p.id);
+      const round2_predictions = mine.filter(x => isRound2(matchMap[x.match_id])).length;
+      const round3_predictions = mine.filter(x => isRound3(matchMap[x.match_id])).length;
       return {
         player_id: p.id,
         nickname: p.nickname,
         predictions: mine.length,
+        round2_predictions,
+        round3_predictions,
         points: mine.reduce((sum, x) => sum + scorePrediction(x, matchMap[x.match_id] || {}), 0),
         bonus: bonusByPlayer[p.id] || {}
       };
