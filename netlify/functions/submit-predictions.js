@@ -51,20 +51,27 @@ exports.handler = async (event) => {
 
     if (rErr) throw rErr;
 
-    const roundIds = roundMatches.map(m => String(m.id));
+    const now = Date.now();
+    const openMatches = roundMatches.filter(m => new Date(m.kickoff).getTime() - LOCK_OFFSET_MS > now);
+    const openIds = openMatches.map(m => String(m.id));
     const submittedIds = new Set(ids.map(String));
-    const firstKickoff = roundMatches[0] ? new Date(roundMatches[0].kickoff).getTime() : null;
-    const deadline = firstKickoff ? firstKickoff - LOCK_OFFSET_MS : null;
 
-    if (deadline && Date.now() >= deadline) {
+    if (!openMatches.length) {
       return json(400, {
-        error: 'This round is locked. Picks close at the first game kickoff.'
+        error: 'This round is locked. There are no remaining matches open for picks.'
       });
     }
 
-    if (submittedIds.size !== roundIds.length || !roundIds.every(id => submittedIds.has(id))) {
+    const invalidMatch = [...submittedIds].find(id => !openIds.includes(id));
+    if (invalidMatch) {
       return json(400, {
-        error: `Please predict every match in ${round} before locking in your picks.`
+        error: 'One or more selected matches has already kicked off and can no longer be picked.'
+      });
+    }
+
+    if (submittedIds.size !== openIds.length || !openIds.every(id => submittedIds.has(id))) {
+      return json(400, {
+        error: `Please predict every remaining open match in ${round} before locking in your picks.`
       });
     }
 
@@ -76,7 +83,7 @@ exports.handler = async (event) => {
 
     if (invalid) {
       return json(400, {
-        error: 'Please choose a winner/draw and enter both scores for every match.'
+        error: 'Please choose a winner/draw and enter both scores for every remaining match.'
       });
     }
 
@@ -105,13 +112,13 @@ exports.handler = async (event) => {
       .from('predictions')
       .select('id,match_id')
       .eq('player_id', player.id)
-      .in('match_id', roundIds);
+      .in('match_id', openIds);
 
     if (existingErr) throw existingErr;
 
     if (existingPredictions && existingPredictions.length > 0) {
       return json(400, {
-        error: `You have already locked in picks for ${round}. Picks are final once submitted.`
+        error: `You have already locked in one or more remaining picks for ${round}. Picks are final once submitted.`
       });
     }
 
