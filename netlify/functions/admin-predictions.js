@@ -1,4 +1,5 @@
-const { client, json, requireAdmin, scorePrediction } = require('./_supabase');
+const { client, json, requireAdmin } = require('./_supabase');
+const { scorePrediction } = require('./_scoring');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') return json(405, { error: 'GET only' });
