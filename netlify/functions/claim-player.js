@@ -10,7 +10,6 @@ exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body || '{}');
     const nickname = normalizeNickname(body.nickname);
-    const playerId = String(body.player_id || '').trim();
 
     if (!nickname) return json(400, { error: 'Enter your name first.' });
 
@@ -25,10 +24,7 @@ exports.handler = async (event) => {
 
     const player = existing && existing[0];
     if (player) {
-      if (playerId && String(player.id) === playerId) {
-        return json(200, { ok: true, player, existing: true });
-      }
-      return json(409, { error: 'This name is already taken. Please add an initial, number, or nickname.' });
+      return json(200, { ok: true, player, existing: true, logged_in: true });
     }
 
     const { data: created, error: createErr } = await sb
@@ -39,7 +35,7 @@ exports.handler = async (event) => {
 
     if (createErr) throw createErr;
 
-    return json(200, { ok: true, player: created, existing: false });
+    return json(200, { ok: true, player: created, existing: false, logged_in: true });
   } catch (e) {
     return json(500, { error: e.message });
   }
