@@ -9,7 +9,7 @@
 <body>
   <header>
     <h1>Admin Panel</h1>
-    <p>Private view for results, leaderboard, and everyone’s locked predictions. You can now edit submitted picks here.</p>
+    <p>Private view for results, leaderboard, and everyone’s locked predictions. You can edit picks and sync scores here.</p>
   </header>
 
   <main class="wrap">
@@ -18,6 +18,7 @@
       <div class="row">
         <input id="adminPass" type="password" placeholder="Admin password">
         <button id="loadPredictions">Show / refresh predictions</button>
+        <button id="syncResults" class="secondary">Sync live / final scores</button>
       </div>
       <p class="small" id="adminStatus"></p>
     </section>
