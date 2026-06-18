@@ -49,6 +49,28 @@
     return `<div class="team ${side}"><span class="team-name">${team}</span></div>`;
   }
 
+  function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function randomScoreForWinner(winner) {
+    if (winner === 'draw') {
+      const score = randomInt(0, 3);
+      return [score, score];
+    }
+    const loserScore = randomInt(0, 2);
+    const winnerScore = randomInt(loserScore + 1, Math.min(loserScore + 4, 6));
+    return winner === 'home' ? [winnerScore, loserScore] : [loserScore, winnerScore];
+  }
+
+  function randomizeRemaining(remaining) {
+    remaining.forEach(match => {
+      const winner = ['home', 'draw', 'away'][randomInt(0, 2)];
+      const [home_score, away_score] = randomScoreForWinner(winner);
+      picks[match.id] = { predicted_winner: winner, home_score, away_score };
+    });
+  }
+
   function renderMatch(match) {
     const pick = picks[match.id] || {};
     const option = (key, label) => `<button class="${pick.predicted_winner === key ? 'active' : ''}" data-late-pick="${match.id}:${key}">${label}</button>`;
@@ -105,6 +127,17 @@
         picks[id][side === 'home' ? 'home_score' : 'away_score'] = input.value === '' ? null : Number(input.value);
       };
     });
+    document.querySelectorAll('[data-late-random]').forEach(button => {
+      button.onclick = async () => {
+        await prepare();
+        const remaining = openMatches.filter(match => !savedMatchIds.has(String(match.id)));
+        randomizeRemaining(remaining);
+        await renderLateRound();
+      };
+    });
+    document.querySelectorAll('[data-late-submit]').forEach(button => {
+      button.onclick = submitLateRound;
+    });
   }
 
   async function renderLateRound() {
@@ -132,8 +165,9 @@
       });
 
       const first = remaining[0];
+      const topControls = `<div class="action-bar late-top-actions"><button type="button" class="secondary" data-late-random>Random Pick All</button><button type="button" data-late-submit>Lock in remaining Round 2 picks</button></div>`;
       const notice = `<div class="round-lock open-notice">🔓 Late Round 2 is open only for matches that have not kicked off yet. The games already played are missed. Deadline: ${fmtFull(first.kickoff)} Kuwait time.</div>`;
-      $('#matches').innerHTML = notice + Object.entries(grouped).map(([day, games]) => `<div class="day-header">${day}</div>${games.map(renderMatch).join('')}`).join('');
+      $('#matches').innerHTML = topControls + notice + Object.entries(grouped).map(([day, games]) => `<div class="day-header">${day}</div>${games.map(renderMatch).join('')}`).join('');
       bindLateInputs();
     } catch (error) {
       $('#status').innerHTML = `<span class="bad">${error.message}</span>`;
