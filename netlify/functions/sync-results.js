@@ -5,8 +5,8 @@ const LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'INT', 'LIVE']
 const FINISHED_STATUSES = new Set(['FT', 'AET', 'PEN']);
 const UPDATE_STATUSES = new Set([...LIVE_STATUSES, ...FINISHED_STATUSES]);
 
-const BEFORE_KICKOFF_MS = 20 * 60 * 1000;
-const AFTER_KICKOFF_MS = 4 * 60 * 60 * 1000;
+const BEFORE_KICKOFF_MS = 0;
+const AFTER_KICKOFF_MS = 140 * 60 * 1000;
 
 function normalizeTeam(value) {
   return String(value || '')
