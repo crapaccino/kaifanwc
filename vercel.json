@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/.netlify/functions/submit-predictions",
+      "destination": "/api/submit-kickoff"
+    },
+    {
       "source": "/.netlify/functions/:path*",
       "destination": "/api/:path*"
     }
