@@ -1,5 +1,5 @@
 (() => {
-  const LOCK_OFFSET_MS = 2 * 60 * 60 * 1000;
+  const LOCK_OFFSET_MS = 0;
   let matches = [];
 
   const fmtFull = d => new Intl.DateTimeFormat("en-GB", {
@@ -36,7 +36,7 @@
     const deadline = roundDeadline(round);
     if (!deadline) return;
 
-    notice.innerHTML = `⏳ Predict every match in this round. Picks close <b>2 hours before the first kickoff</b>. Deadline: ${fmtFull(deadline)} Kuwait time.`;
+    notice.innerHTML = `⏳ Predict every match in this round. Picks close <b>at the first kickoff</b>. Deadline: ${fmtFull(deadline)} Kuwait time.`;
 
     if (Date.now() >= deadline.getTime()) {
       const submitBtn = document.querySelector('#submitBtn');
@@ -46,7 +46,7 @@
       }
       const matchesEl = document.querySelector('#matches');
       if (matchesEl) {
-        matchesEl.innerHTML = `<div class="notice"><b>This round is locked.</b><br><span class="small">Picks closed at ${fmtFull(deadline)} Kuwait time, 2 hours before the first kickoff.</span></div>`;
+        matchesEl.innerHTML = `<div class="notice"><b>This round is locked.</b><br><span class="small">Picks closed at ${fmtFull(deadline)} Kuwait time.</span></div>`;
       }
     }
   }
