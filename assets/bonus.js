@@ -18,7 +18,6 @@
     ]}
   ];
 
-  let deadline = null;
   let syncing = false;
   const SAVE_ENDPOINT = 'bonus-predictions';
   const storeKey = () => 'kaifanwc_bonus_' + (localStorage.getItem('kaifanwc_name') || 'guest');
@@ -27,8 +26,6 @@
   const writePicks = p => localStorage.setItem(storeKey(), JSON.stringify(p));
   const isLocked = () => localStorage.getItem(lockKey()) === '1';
   const nickname = () => String(localStorage.getItem('kaifanwc_name') || '').trim().toLowerCase();
-  const isClosed = () => deadline && Date.now() >= deadline.getTime();
-  function safeDateText(d){ try { return new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kuwait',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(d)); } catch(_) { return 'first kickoff of Round 2'; } }
 
   async function api(path, opts={}){
     const r = await fetch('/.netlify/functions/' + path, opts);
@@ -36,15 +33,6 @@
     try { j = await r.json(); } catch(_) {}
     if(!r.ok) throw new Error(j.error || 'Request failed');
     return j;
-  }
-
-  async function loadDeadline(){
-    try{
-      const state = await api('get-state');
-      const games = (state.matches || []).filter(m => String(m.round || '').toLowerCase().includes('round 2')).sort((a,b)=>new Date(a.kickoff)-new Date(b.kickoff));
-      deadline = games[0] && games[0].kickoff ? new Date(games[0].kickoff) : null;
-      if(deadline && isNaN(deadline.getTime())) deadline = null;
-    }catch(_){ deadline = null; }
   }
 
   async function loadRemoteBonus(){
@@ -67,7 +55,7 @@
   }
 
   async function syncLockedPicks(){
-    if(syncing || !isLocked() || isClosed() || !nickname()) return;
+    if(syncing || !isLocked() || !nickname()) return;
     const p = readPicks();
     const missing = CATEGORIES.find(c => !p[c.key] || !String(p[c.key]).trim());
     if(missing) return;
@@ -81,7 +69,7 @@
     const leader = tabs.querySelector('[data-tab="leaderboard"]');
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.textContent = isLocked() ? 'Predictions 🔒' : 'Predictions';
+    btn.textContent = 'Predictions';
     btn.setAttribute('data-bonus-tab','bonus');
     btn.onclick = renderBonus;
     if (leader) tabs.insertBefore(btn, leader); else tabs.appendChild(btn);
@@ -89,7 +77,7 @@
 
   function updateTabLabel(){
     const b = document.querySelector('[data-bonus-tab="bonus"]');
-    if(b) b.textContent = isLocked() ? 'Predictions 🔒' : 'Predictions';
+    if(b) b.textContent = 'Predictions';
   }
 
   function clearActiveTabs() {
@@ -105,16 +93,16 @@
       if(!opt) return '';
       return '<div class="bonus-locked-row"><span>'+cat.title+'</span><b>'+(opt.code ? '<span class="bonus-option-main">'+pickLabel(opt)+'</span>' : opt.label)+'</b></div>';
     }).join('');
-    return '<div class="bonus-card bonus-locked-summary"><h2>🔒 Tournament Predictions Locked</h2><p class="bonus-note">Your tournament picks are saved and can no longer be changed.</p>'+rows+'</div>';
+    return '<div class="bonus-card bonus-locked-summary"><h2>Tournament Predictions Saved</h2><p class="bonus-note">Your tournament picks are saved, but bonus picks are currently reopened. You may change and save them again.</p>'+rows+'</div>';
   }
 
-  function renderCategory(cat, picks, locked) {
+  function renderCategory(cat, picks) {
     const val = picks[cat.key] || '';
     return '<div class="bonus-card">' +
       '<h3>'+cat.title+' — '+cat.points+' pts</h3>' +
       '<p class="bonus-note">Choose one favourite, or pick the field option to cover everyone not listed.</p>' +
       '<div class="bonus-grid">' +
-      cat.options.map(opt => '<button type="button" class="bonus-option '+(val===opt.name?'active':'')+'" '+(locked?'disabled':'')+' data-bonus-pick="'+cat.key+'" data-value="'+opt.name+'"><span class="bonus-option-main">'+pickLabel(opt)+'</span><span class="bonus-rank">'+opt.chance+'</span></button>').join('') +
+      cat.options.map(opt => '<button type="button" class="bonus-option '+(val===opt.name?'active':'')+'" data-bonus-pick="'+cat.key+'" data-value="'+opt.name+'"><span class="bonus-option-main">'+pickLabel(opt)+'</span><span class="bonus-rank">'+opt.chance+'</span></button>').join('') +
       '</div></div>';
   }
 
@@ -127,19 +115,14 @@
       if (submitBtn) submitBtn.style.display = 'none';
       if (!matches) return;
       const picks = readPicks();
-      const locked = isLocked() || isClosed();
       if(isLocked()) syncLockedPicks();
-      const deadlineText = deadline ? 'Deadline: '+safeDateText(deadline)+' Kuwait time.' : 'Deadline: first kickoff of Round 2.';
-      const closedText = isClosed() ? '<p class="bonus-status"><span class="bad">Bonus predictions are closed.</span></p>' : '';
-      matches.innerHTML = selectedSummary(picks) + '<div class="bonus-card"><h2>'+(isLocked()?'Bonus Predictions 🔒':'Bonus Predictions')+'</h2><p class="bonus-note">One-time tournament picks. '+deadlineText+'</p>'+closedText+'</div>' +
-        CATEGORIES.map(c => renderCategory(c, picks, locked)).join('') +
-        '<div class="bonus-card"><div class="bonus-actions"><button id="lockBonusBtn" '+(locked?'disabled':'')+'>'+(isLocked()?'🔒 Tournament Predictions Locked':(isClosed()?'Predictions closed':'Lock bonus predictions'))+'</button><button id="clearBonusBtn" class="secondary" '+(locked?'disabled':'')+'>Clear bonus picks</button></div><p class="bonus-status" id="bonusStatus">'+(isLocked()?'<span class="ok">🔒 Your tournament predictions are locked and visible on the leaderboard.</span>':(isClosed()?'<span class="bad">The Round 2 deadline has passed.</span>':'Pick all 4 categories, then lock them in.'))+'</p></div>';
-      if (locked) return;
+      matches.innerHTML = selectedSummary(picks) + '<div class="bonus-card"><h2>Bonus Predictions Reopened</h2><p class="bonus-note">Tournament bonus predictions are open until further notice. You can submit them now, or change your previous bonus picks and save again.</p></div>' +
+        CATEGORIES.map(c => renderCategory(c, picks)).join('') +
+        '<div class="bonus-card"><div class="bonus-actions"><button id="lockBonusBtn">'+(isLocked()?'Save updated bonus predictions':'Save bonus predictions')+'</button><button id="clearBonusBtn" class="secondary">Clear bonus picks</button></div><p class="bonus-status" id="bonusStatus">'+(isLocked()?'<span class="ok">Your current tournament predictions are saved. You can still change them while bonus picks are reopened.</span>':'Pick all 4 categories, then save them.')+'</p></div>';
       document.querySelectorAll('[data-bonus-pick]').forEach(btn => btn.onclick = () => { const p = readPicks(); p[btn.dataset.bonusPick] = btn.dataset.value; writePicks(p); renderBonus(); });
       const lock = document.querySelector('#lockBonusBtn');
       if (lock) lock.onclick = async () => {
         try{
-          if(isClosed()) throw new Error('Bonus predictions are closed. The deadline was the first kickoff of Round 2.');
           const p = readPicks();
           const missing = CATEGORIES.find(c => !p[c.key] || !String(p[c.key]).trim());
           if (missing) { document.querySelector('#bonusStatus').innerHTML = '<span class="bad">Choose a pick for '+missing.title+'.</span>'; return; }
@@ -161,7 +144,6 @@
   }
 
   async function start() {
-    await loadDeadline();
     await loadRemoteBonus();
     ensureTab();
     updateTabLabel();
