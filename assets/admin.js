@@ -67,6 +67,10 @@ function filteredPredictionRows(){
   ].filter(Boolean).join(' ').toLowerCase().includes(q));
 }
 
+function predictionOption(value,label,current){
+  return `<option value="${value}" ${current===value?'selected':''}>${label}</option>`;
+}
+
 function renderPredictions(){
   const rows=filteredPredictionRows();
 
@@ -82,10 +86,11 @@ function renderPredictions(){
           <th>Name</th>
           <th>Round</th>
           <th>Match</th>
-          <th>Predicted winner</th>
-          <th>Predicted score</th>
+          <th>Pick</th>
+          <th>Score</th>
           <th>Actual</th>
           <th>Pts</th>
+          <th>Edit</th>
         </tr>
       </thead>
       <tbody>
@@ -94,15 +99,43 @@ function renderPredictions(){
             <td><b>${r.nickname}</b></td>
             <td>${r.round}</td>
             <td>${r.home} vs ${r.away}<br><span class="small">${fmt(r.kickoff)} Kuwait</span></td>
-            <td>${r.predicted_winner}</td>
-            <td>${r.predicted_home_score} - ${r.predicted_away_score}</td>
+            <td>
+              <select data-winner="${r.prediction_id}">
+                ${predictionOption('home',r.home,r.predicted_winner_key)}
+                ${predictionOption('draw','Draw',r.predicted_winner_key)}
+                ${predictionOption('away',r.away,r.predicted_winner_key)}
+              </select>
+            </td>
+            <td>
+              <div class="admin-score-edit">
+                <input type="number" min="0" max="20" value="${r.predicted_home_score}" data-home-score="${r.prediction_id}" aria-label="${r.home} predicted score">
+                <span>-</span>
+                <input type="number" min="0" max="20" value="${r.predicted_away_score}" data-away-score="${r.prediction_id}" aria-label="${r.away} predicted score">
+              </div>
+            </td>
             <td>${r.actual_home_score==null||r.actual_away_score==null?'—':`${r.actual_home_score} - ${r.actual_away_score}`}</td>
             <td><b>${r.points}</b></td>
+            <td><button class="secondary" data-save-prediction="${r.prediction_id}">Save</button></td>
           </tr>
-        `).join('') || '<tr><td colspan="7">No matching predictions.</td></tr>'}
+        `).join('') || '<tr><td colspan="8">No matching predictions.</td></tr>'}
       </tbody>
     </table>
   `;
+
+  document.querySelectorAll('[data-save-prediction]').forEach(btn=>btn.onclick=async()=>{
+    try{
+      const id=btn.dataset.savePrediction;
+      const predicted_winner=document.querySelector(`[data-winner="${id}"]`).value;
+      const home_score=Number(document.querySelector(`[data-home-score="${id}"]`).value);
+      const away_score=Number(document.querySelector(`[data-away-score="${id}"]`).value);
+      await api('admin-update-prediction',{method:'POST',body:JSON.stringify({prediction_id:id,predicted_winner,home_score,away_score})});
+      $('#adminStatus').innerHTML='<span class="ok">Prediction updated.</span>';
+      await getState();
+      await loadPredictions();
+    }catch(e){
+      $('#adminStatus').innerHTML=`<span class="bad">${e.message}</span>`;
+    }
+  });
 }
 
 async function loadPredictions(){
