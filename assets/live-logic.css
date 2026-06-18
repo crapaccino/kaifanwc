@@ -1,0 +1,33 @@
+.live-pick-row.exact-score{
+  position:relative;
+  border-color:#37d67a;
+  background:linear-gradient(135deg,#eafff1,#f7fffb);
+  box-shadow:0 0 0 2px rgba(55,214,122,.18),0 10px 24px rgba(19,121,91,.10);
+}
+.live-pick-row.exact-score::before{
+  content:'PERFECT SCORE';
+  position:absolute;
+  top:8px;
+  right:10px;
+  font-size:9px;
+  font-weight:950;
+  letter-spacing:.08em;
+  color:#13795b;
+  background:#dcfce7;
+  border:1px solid #86efac;
+  border-radius:999px;
+  padding:3px 7px;
+}
+.status-chip.exact-score{
+  background:#bbf7d0;
+  color:#0f7a43;
+  box-shadow:0 0 0 1px rgba(15,122,67,.14) inset;
+}
+@media(max-width:600px){
+  .live-pick-row.exact-score::before{
+    position:static;
+    display:inline-flex;
+    margin-top:6px;
+    width:max-content;
+  }
+}
