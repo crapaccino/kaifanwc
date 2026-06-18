@@ -37,6 +37,9 @@ exports.handler = async (event) => {
             : 'Draw';
 
         return {
+          prediction_id: pred.id,
+          player_id: player.id,
+          match_id: match.id,
           nickname: player.nickname,
           round: match.round,
           group_name: match.group_name,
