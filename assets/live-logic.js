@@ -1,5 +1,5 @@
 (() => {
-  const STATUS_ORDER = { exact: 0, winner: 1, alive: 2, wrong: 3, neutral: 4 };
+  const STATUS_ORDER = { exact: 0, winnerAlive: 1, winnerDead: 2, alive: 3, wrong: 4, neutral: 5 };
   let refreshQueued = false;
   let isRefreshing = false;
 
@@ -18,11 +18,16 @@
     return 'Draw';
   }
 
+  function goalsAway(currentHome, currentAway, predictedHome, predictedAway) {
+    return Math.abs(predictedHome - currentHome) + Math.abs(predictedAway - currentAway);
+  }
+
   function setStatus(row, status) {
     row.classList.remove('perfect', 'close', 'wrong', 'neutral', 'exact-score');
     row.classList.add(status.cls);
     if (status.kind === 'exact') row.classList.add('exact-score');
     row.dataset.liveStatusRank = String(STATUS_ORDER[status.kind] ?? 99);
+    row.dataset.liveGoalsAway = String(status.goalsAway ?? 999);
 
     const chip = row.querySelector('.status-chip:not(.bold)');
     if (chip) {
@@ -61,14 +66,18 @@
         }
 
         const [predictedHome, predictedAway] = pickScore;
-        const exactScore = predictedHome === currentHome && predictedAway === currentAway;
+        const away = goalsAway(currentHome, currentAway, predictedHome, predictedAway);
+        const exactScore = away === 0;
         const rightWinner = predictedWinner === currentWinner;
         const scoreStillAlive = currentHome <= predictedHome && currentAway <= predictedAway;
+        const awayLabel = `${away} goal${away === 1 ? '' : 's'} away`;
 
         if (exactScore) {
-          setStatus(row, { kind: 'exact', cls: 'perfect', icon: '🥇', label: 'Perfect score' });
+          setStatus(row, { kind: 'exact', cls: 'perfect', icon: '🥇', label: 'Perfect score', goalsAway: 0 });
+        } else if (rightWinner && scoreStillAlive) {
+          setStatus(row, { kind: 'winnerAlive', cls: 'perfect', icon: '✅', label: awayLabel, goalsAway: away });
         } else if (rightWinner) {
-          setStatus(row, { kind: 'winner', cls: 'perfect', icon: '✅', label: 'Right winner' });
+          setStatus(row, { kind: 'winnerDead', cls: 'perfect', icon: '✅', label: `${awayLabel} - score impossible`, goalsAway: away });
         } else if (scoreStillAlive) {
           setStatus(row, { kind: 'alive', cls: 'close', icon: '🟡', label: 'Still alive' });
         } else {
@@ -80,6 +89,9 @@
         const rankA = Number(a.dataset.liveStatusRank || 99);
         const rankB = Number(b.dataset.liveStatusRank || 99);
         if (rankA !== rankB) return rankA - rankB;
+        const goalsA = Number(a.dataset.liveGoalsAway || 999);
+        const goalsB = Number(b.dataset.liveGoalsAway || 999);
+        if (goalsA !== goalsB) return goalsA - goalsB;
         return Number(a.dataset.originalLiveOrder || 0) - Number(b.dataset.originalLiveOrder || 0);
       });
 
