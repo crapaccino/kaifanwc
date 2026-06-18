@@ -4,5 +4,11 @@
       "source": "/.netlify/functions/:path*",
       "destination": "/api/:path*"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/sync-results",
+      "schedule": "*/15 * * * *"
+    }
   ]
 }
