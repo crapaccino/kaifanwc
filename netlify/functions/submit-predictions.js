@@ -1,6 +1,6 @@
 const { client, json } = require('./_supabase');
 
-const LOCK_OFFSET_MS = 2 * 60 * 60 * 1000;
+const LOCK_OFFSET_MS = 0;
 
 function normalizeNickname(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -58,7 +58,7 @@ exports.handler = async (event) => {
 
     if (deadline && Date.now() >= deadline) {
       return json(400, {
-        error: 'This round is locked. Picks close 2 hours before the first game of the round.'
+        error: 'This round is locked. Picks close at the first game kickoff.'
       });
     }
 
