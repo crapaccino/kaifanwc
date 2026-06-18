@@ -9,7 +9,7 @@
 <body>
   <header>
     <h1>Admin Panel</h1>
-    <p>Private view for results, leaderboard, and everyone’s locked predictions.</p>
+    <p>Private view for results, leaderboard, and everyone’s locked predictions. You can now edit submitted picks here.</p>
   </header>
 
   <main class="wrap">
@@ -17,19 +17,20 @@
       <h2>Admin access</h2>
       <div class="row">
         <input id="adminPass" type="password" placeholder="Admin password">
-        <button id="loadPredictions">Show predictions</button>
+        <button id="loadPredictions">Show / refresh predictions</button>
       </div>
       <p class="small" id="adminStatus"></p>
     </section>
 
     <section class="card admin-card">
-      <h2>Everyone’s predictions</h2>
+      <h2>Edit everyone’s predictions</h2>
+      <p class="small">Change the winner/draw or score, then press Save on that row.</p>
       <div class="row admin-filters">
         <input id="searchPredictions" placeholder="Search name, team, round...">
         <button id="exportCsv" class="secondary">Export CSV</button>
       </div>
       <div class="admin-table-wrap" id="predictionsTable">
-        <div class="notice">Enter the admin password and click Show predictions.</div>
+        <div class="notice">Enter the admin password and click Show / refresh predictions.</div>
       </div>
     </section>
 
