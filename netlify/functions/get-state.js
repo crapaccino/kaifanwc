@@ -1,4 +1,5 @@
-const { client, json, scorePrediction } = require('./_supabase');
+const { client, json } = require('./_supabase');
+const { scorePrediction } = require('./_scoring');
 
 exports.handler = async () => {
   try {
