@@ -105,6 +105,8 @@ button.danger{background:#b42318;}
 .action-bar{display:grid;grid-template-columns:1fr;gap:10px;margin:22px 0 6px;}
 #submitBtn{min-height:56px;font-size:17px;border-radius:16px;}
 #loadBtn{min-height:48px;border-radius:16px;}
+#quickLockBtn{display:none!important;}
+.quick-pick-picked #quickLockBtn{display:inline-flex!important;}
 
 .admin-card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:16px;box-shadow:0 8px 22px rgba(18,26,48,.08);margin:16px 0;}
 .admin-table-wrap{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:18px;}
