@@ -5,6 +5,9 @@ const LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'INT', 'LIVE']
 const FINISHED_STATUSES = new Set(['FT', 'AET', 'PEN']);
 const UPDATE_STATUSES = new Set([...LIVE_STATUSES, ...FINISHED_STATUSES]);
 
+const BEFORE_KICKOFF_MS = 20 * 60 * 1000;
+const AFTER_KICKOFF_MS = 4 * 60 * 60 * 1000;
+
 function normalizeTeam(value) {
   return String(value || '')
     .toLowerCase()
@@ -26,17 +29,18 @@ function dateKey(date) {
   }).format(date);
 }
 
-function daysAroundMatches(matches) {
-  const days = new Set();
-  const now = Date.now();
-  matches.forEach(match => {
-    const kickoff = new Date(match.kickoff).getTime();
-    const isRelevant = Math.abs(kickoff - now) <= 36 * 60 * 60 * 1000 ||
-      match.home_score === null || match.away_score === null;
-    if (!isRelevant) return;
-    days.add(dateKey(new Date(kickoff)));
-  });
-  return [...days].sort();
+function isInActiveWindow(match, now = Date.now()) {
+  const kickoff = new Date(match.kickoff).getTime();
+  if (!Number.isFinite(kickoff)) return false;
+  return now >= kickoff - BEFORE_KICKOFF_MS && now <= kickoff + AFTER_KICKOFF_MS;
+}
+
+function activeMatchesOnly(matches) {
+  return (matches || []).filter(match => isInActiveWindow(match));
+}
+
+function daysForMatches(matches) {
+  return [...new Set(matches.map(match => dateKey(new Date(match.kickoff))))].sort();
 }
 
 function authOk(event) {
@@ -56,9 +60,7 @@ async function fetchApiFixtures(date) {
   const base = process.env.FOOTBALL_API_BASE || 'https://v3.football.api-sports.io';
   const url = `${base}/fixtures?date=${encodeURIComponent(date)}&timezone=${encodeURIComponent(KUWAIT_TZ)}`;
   const response = await fetch(url, {
-    headers: {
-      'x-apisports-key': key
-    }
+    headers: { 'x-apisports-key': key }
   });
 
   const data = await response.json();
@@ -115,14 +117,19 @@ exports.handler = async (event) => {
 
     if (error) throw error;
 
-    const days = daysAroundMatches(matches || []);
+    const matchesToCheck = activeMatchesOnly(matches || []);
+    if (!matchesToCheck.length) {
+      return json(200, { ok: true, checked_dates: [], updated: 0, updates: [], skipped: [], message: 'No matches are currently in the sync window, so no API requests were used.' });
+    }
+
+    const days = daysForMatches(matchesToCheck);
     const fixturesByDate = {};
     for (const day of days) fixturesByDate[day] = await fetchApiFixtures(day);
 
     const updates = [];
     const skipped = [];
 
-    for (const match of matches || []) {
+    for (const match of matchesToCheck) {
       const day = dateKey(new Date(match.kickoff));
       const fixture = findFixture(match, fixturesByDate[day] || []);
       if (!fixture) {
@@ -144,12 +151,7 @@ exports.handler = async (event) => {
         .eq('id', match.id);
 
       if (updateError) throw updateError;
-      updates.push({
-        id: match.id,
-        match: `${match.home} vs ${match.away}`,
-        score: `${score.home_score}-${score.away_score}`,
-        status: score.status
-      });
+      updates.push({ id: match.id, match: `${match.home} vs ${match.away}`, score: `${score.home_score}-${score.away_score}`, status: score.status });
     }
 
     return json(200, { ok: true, checked_dates: days, updated: updates.length, updates, skipped });
