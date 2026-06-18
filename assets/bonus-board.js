@@ -10,7 +10,6 @@
   };
   const compact = v => SHORT[v] || (v || '-');
   let lastHtml = '';
-
   async function addBoard(){
     const target = document.querySelector('.leaderboard-tab');
     if(!target) return;
@@ -26,7 +25,7 @@
       const p = grouped[name];
       return '<tr><td>'+(index + 1)+'</td><td><b>'+pretty(name)+'</b></td><td>'+compact(p.winner)+'</td><td>'+compact(p.potm)+'</td><td>'+compact(p.golden_boot)+'</td><td>'+compact(p.golden_glove)+'</td></tr>';
     }).join('') || '<tr><td colspan="6">No bonus predictions locked yet.</td></tr>';
-    const html = '<h2>Tournament Predictions ('+names.length+')</h2><p class="bonus-note">Locked bonus picks. Other = any unlisted team, player, or goalkeeper.</p><table><thead><tr><th>#</th><th>Name</th><th>Winner</th><th>POTM</th><th>Boot</th><th>Glove</th></tr></thead><tbody>'+body+'</tbody></table>';
+    const html = '<h2>Tournament Predictions</h2><p class="bonus-note">Locked bonus picks. Other = any unlisted team, player, or goalkeeper.</p><table><thead><tr><th>#</th><th>Name</th><th>Winner</th><th>POTM</th><th>Boot</th><th>Glove</th></tr></thead><tbody>'+body+'</tbody></table>';
     if(html === lastHtml && target.querySelector('.bonus-board')) return;
     lastHtml = html;
     let board = target.querySelector('.bonus-board');
