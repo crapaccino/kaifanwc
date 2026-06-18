@@ -19,17 +19,26 @@
   function setScore(p){
     const h=document.querySelector(`[data-score="${p.id}:home"]`), a=document.querySelector(`[data-score="${p.id}:away"]`);
     if(h){h.value=p.h;h.dispatchEvent(new Event('input',{bubbles:true}));}
-    if(a){a.value=p.a;a.dispatchEvent(new Event('input',{bubbles:true}));}
+    if(a){a.value=p.a; a.dispatchEvent(new Event('input',{bubbles:true}));}
   }
   async function apply(plans){ plans.forEach(setScore); for(const p of plans){ const b=document.querySelector(`[data-pick="${p.id}:${p.out}"]`); if(b)b.click(); await new Promise(r=>setTimeout(r,35)); } }
   async function one(id){ const r=tab(); if(!r)return; const s=await state(); const m=games(s,r).find(x=>String(x.id)===String(id)); if(m) await apply([plan(m)]); }
   async function all(){ const r=tab(); if(!r)return; const s=await state(); await apply(games(s,r).map(plan)); }
+  function lockNow(){ const submit=document.querySelector('#submitBtn'); if(submit && submit.style.display!=='none' && !submit.disabled) submit.click(); }
   function inject(){
     if(!tab()) return;
     const cards=[...document.querySelectorAll('.match')].filter(x=>x.querySelector('[data-pick]'));
     if(!cards.length) return;
     const box=document.querySelector('#matches');
-    if(box&&!box.querySelector('.quick-pick-all')){ const c=document.createElement('div'); c.className='quick-pick-all round-lock open-notice'; c.innerHTML='<div><b>Need help?</b><br><span class="small">Quick Pick fills a sensible result and score.</span></div><button type="button" class="secondary" id="quickPickAllBtn">🎲 Quick Pick All</button>'; const first=box.querySelector('.day-header'); box.insertBefore(c,first||box.firstChild); c.querySelector('#quickPickAllBtn').onclick=all; }
+    if(box&&!box.querySelector('.quick-pick-all')){
+      const c=document.createElement('div');
+      c.className='quick-pick-all round-lock open-notice';
+      c.innerHTML='<div><b>Need help?</b><br><span class="small">Quick Pick fills a sensible result and score.</span></div><div class="quick-pick-actions"><button type="button" class="secondary" id="quickPickAllBtn">🎲 Quick Pick All</button><button type="button" id="quickLockBtn">Lock in picks</button></div>';
+      const first=box.querySelector('.day-header');
+      box.insertBefore(c,first||box.firstChild);
+      c.querySelector('#quickPickAllBtn').onclick=all;
+      c.querySelector('#quickLockBtn').onclick=lockNow;
+    }
     cards.forEach(card=>{ if(card.querySelector('.quick-pick-one')) return; const b=card.querySelector('[data-pick]'); const id=b.dataset.pick.split(':')[0]; const row=document.createElement('div'); row.className='auto-pick-row'; row.innerHTML='<button type="button" class="secondary quick-pick-one">🎲 Quick Pick</button>'; const score=card.querySelector('.score'); if(score) score.insertAdjacentElement('afterend',row); row.querySelector('button').onclick=()=>one(id); });
   }
   window.addEventListener('load',()=>{setInterval(inject,800);inject();});
