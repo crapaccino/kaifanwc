@@ -41,6 +41,15 @@
     return LATE_ROUND_RE.test(String(match.round || ''));
   }
 
+  function isMexicoSouthKorea(match) {
+    const teams = [normalize(match.home), normalize(match.away)];
+    return teams.includes('mexico') && teams.includes('south korea');
+  }
+
+  function isLateEligible(match) {
+    return isRound2(match) && !isMexicoSouthKorea(match);
+  }
+
   function matchOpen(match) {
     return new Date(match.kickoff).getTime() > Date.now();
   }
@@ -86,7 +95,7 @@
     const [main, player] = await Promise.all([getState(), getPlayer()]);
     savedMatchIds = new Set((player.predictions || []).map(prediction => String(prediction.match_id)));
     openMatches = (main.matches || [])
-      .filter(match => isRound2(match) && matchOpen(match))
+      .filter(match => isLateEligible(match) && matchOpen(match))
       .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
     currentRound = openMatches[0]?.round || null;
     return { main, player };
@@ -166,7 +175,7 @@
 
       const first = remaining[0];
       const topControls = `<div class="action-bar late-top-actions"><button type="button" class="secondary" data-late-random>Random Pick All</button><button type="button" data-late-submit>Lock in remaining Round 2 picks</button></div>`;
-      const notice = `<div class="round-lock open-notice">🔓 Late Round 2 is open only for matches that have not kicked off yet. The games already played are missed. Deadline: ${fmtFull(first.kickoff)} Kuwait time.</div>`;
+      const notice = `<div class="round-lock open-notice">🔓 Late Round 2 is open only for matches from USA vs Australia onwards. The first four games are missed. Deadline: ${fmtFull(first.kickoff)} Kuwait time.</div>`;
       $('#matches').innerHTML = topControls + notice + Object.entries(grouped).map(([day, games]) => `<div class="day-header">${day}</div>${games.map(renderMatch).join('')}`).join('');
       bindLateInputs();
     } catch (error) {
