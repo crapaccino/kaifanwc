@@ -130,7 +130,7 @@
       const missing = remaining.find(match => { const pick = picks[match.id] || {}; return !pick.predicted_winner || !Number.isInteger(pick.home_score) || !Number.isInteger(pick.away_score); });
       if (missing) throw new Error('Please predict the winner/draw and both scores for every remaining Round 2 match.');
       const predictions = remaining.map(match => { const pick = picks[match.id]; return { match_id: match.id, predicted_winner: pick.predicted_winner, home_score: pick.home_score, away_score: pick.away_score }; });
-      const result = await api('submit-r2-late-predictions', { method: 'POST', body: JSON.stringify({ nickname: name, predictions }) });
+      const result = await api('submit-predictions', { method: 'POST', body: JSON.stringify({ nickname: name, predictions }) });
       $('#status').innerHTML = `<span class="ok">Locked in ${result.saved} remaining Round 2 picks for ${displayName(name)}.</span>`;
       statePromise = null; playerPromise = null; await renderLateRound();
     } catch (error) { $('#status').innerHTML = `<span class="bad">${error.message}</span>`; }
