@@ -74,11 +74,8 @@
   }
 
   async function shouldShowLateButton() {
-    const name = nickname();
-    if (!name) return false;
     await prepare();
-    if (!openMatches.length) return false;
-    return openMatches.some(match => !savedMatchIds.has(String(match.id)));
+    return openMatches.length > 0;
   }
 
   async function addButton() {
@@ -102,6 +99,8 @@
 
   async function renderLateRound() {
     try {
+      statePromise = null;
+      playerPromise = null;
       await prepare();
       document.querySelectorAll('#roundTabs button').forEach(button => button.classList.remove('active'));
       $('#lateRound2Btn')?.classList.add('active');
@@ -141,4 +140,5 @@
   const observer = new MutationObserver(queueButtonCheck);
   observer.observe(document.body, { childList: true, subtree: true });
   window.addEventListener('load', queueButtonCheck);
+  setInterval(queueButtonCheck, 1000);
 })();
