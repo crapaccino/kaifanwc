@@ -23,6 +23,15 @@
   color:#0f7a43;
   box-shadow:0 0 0 1px rgba(15,122,67,.14) inset;
 }
+.live-badge.full-time-badge{
+  background:#ecfdf5!important;
+  color:#047857!important;
+  border-color:#86efac!important;
+}
+.full-time-note{
+  font-weight:900;
+  color:#047857;
+}
 @media(max-width:600px){
   .live-pick-row.exact-score::before{
     position:static;
