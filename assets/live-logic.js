@@ -2,6 +2,8 @@
   const STATUS_ORDER = { exact: 0, winnerAlive: 1, winnerDead: 2, alive: 3, wrong: 4, neutral: 5 };
   let refreshQueued = false;
   let isRefreshing = false;
+  let liveMeta = null;
+  let metaLoading = false;
 
   function scoreNumbers(text) {
     const match = String(text || '').match(/(\d+)\s*[-–]\s*(\d+)/);
@@ -22,6 +24,26 @@
     return Math.abs(predictedHome - currentHome) + Math.abs(predictedAway - currentAway);
   }
 
+  function isFullTime() {
+    const kickoff = liveMeta?.match?.kickoff;
+    if (!kickoff) return false;
+    return Date.now() >= new Date(kickoff).getTime() + (2 * 60 * 60 * 1000);
+  }
+
+  async function loadLiveMeta() {
+    if (metaLoading) return;
+    metaLoading = true;
+    try {
+      const res = await fetch('/.netlify/functions/get-live?ts=' + Date.now());
+      liveMeta = await res.json();
+    } catch (_) {
+      liveMeta = null;
+    } finally {
+      metaLoading = false;
+      queueRefresh();
+    }
+  }
+
   function setStatus(row, status) {
     row.classList.remove('perfect', 'close', 'wrong', 'neutral', 'exact-score');
     row.classList.add(status.cls);
@@ -38,6 +60,25 @@
     }
   }
 
+  function updateMatchBadge(fullTime) {
+    const badge = document.querySelector('.live-badge');
+    if (!badge) return;
+    if (fullTime) {
+      badge.textContent = 'FULL TIME ✅';
+      badge.classList.add('full-time-badge');
+      const info = document.querySelector('.live-card .match-info .meta-row');
+      if (info && !info.querySelector('.full-time-note')) {
+        const note = document.createElement('span');
+        note.className = 'full-time-note';
+        note.textContent = 'Full time';
+        info.appendChild(note);
+      }
+    } else {
+      badge.textContent = 'LIVE / LATEST 🔴';
+      badge.classList.remove('full-time-badge');
+    }
+  }
+
   function refreshLiveStatuses() {
     if (isRefreshing) return;
     isRefreshing = true;
@@ -48,6 +89,9 @@
 
       const score = scoreNumbers(cleanText(liveCard.querySelector('.result-score')));
       if (!score) return;
+
+      const fullTime = isFullTime();
+      updateMatchBadge(fullTime);
 
       const [currentHome, currentAway] = score;
       const teams = liveCard.querySelectorAll('.team-name');
@@ -73,7 +117,11 @@
         const awayLabel = `${away} goal${away === 1 ? '' : 's'} away`;
 
         if (exactScore) {
-          setStatus(row, { kind: 'exact', cls: 'perfect', icon: '🥇', label: 'Perfect score', goalsAway: 0 });
+          setStatus(row, { kind: 'exact', cls: 'perfect', icon: '🥇', label: fullTime ? 'Perfect final score' : 'Perfect score', goalsAway: 0 });
+        } else if (rightWinner && fullTime) {
+          setStatus(row, { kind: 'winnerDead', cls: 'perfect', icon: '✅', label: `Correct winner - ${awayLabel}`, goalsAway: away });
+        } else if (fullTime) {
+          setStatus(row, { kind: 'wrong', cls: 'wrong', icon: '🔴', label: 'Wrong final result' });
         } else if (rightWinner && scoreStillAlive) {
           setStatus(row, { kind: 'winnerAlive', cls: 'perfect', icon: '✅', label: awayLabel, goalsAway: away });
         } else if (rightWinner) {
@@ -117,5 +165,9 @@
 
   const observer = new MutationObserver(queueRefresh);
   observer.observe(document.body, { childList: true, subtree: true });
-  window.addEventListener('load', queueRefresh);
+  window.addEventListener('load', () => {
+    loadLiveMeta();
+    queueRefresh();
+    setInterval(loadLiveMeta, 60000);
+  });
 })();
