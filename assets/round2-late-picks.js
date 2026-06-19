@@ -174,9 +174,9 @@
       });
 
       const first = remaining[0];
-      const topControls = `<div class="action-bar late-top-actions"><button type="button" class="secondary" data-late-random>Random Pick All</button><button type="button" data-late-submit>Lock in remaining Round 2 picks</button></div>`;
       const notice = `<div class="round-lock open-notice">🔓 Late Round 2 is open only for matches from USA vs Australia onwards. The first four games are missed. Deadline: ${fmtFull(first.kickoff)} Kuwait time.</div>`;
-      $('#matches').innerHTML = topControls + notice + Object.entries(grouped).map(([day, games]) => `<div class="day-header">${day}</div>${games.map(renderMatch).join('')}`).join('');
+      const topControls = `<div class="action-bar late-top-actions"><button type="button" class="secondary" data-late-random>Random Pick All</button><button type="button" data-late-submit>Lock in remaining Round 2 picks</button></div>`;
+      $('#matches').innerHTML = notice + topControls + Object.entries(grouped).map(([day, games]) => `<div class="day-header">${day}</div>${games.map(renderMatch).join('')}`).join('');
       bindLateInputs();
     } catch (error) {
       $('#status').innerHTML = `<span class="bad">${error.message}</span>`;
