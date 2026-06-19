@@ -1,0 +1,23 @@
+#smoothRoundControls,
+.late-top-actions{
+  margin:10px 0 12px;
+  gap:12px;
+}
+#smoothRoundControls button,
+.late-top-actions button{
+  min-height:48px;
+  border-radius:14px;
+  font-size:15px;
+  font-weight:900;
+}
+#smoothRoundControls + .round-lock,
+.late-top-actions + .round-lock{
+  margin-top:0;
+}
+.quick-pick-panel,
+.quick-pick-all-panel,
+.quick-pick-card,
+.quick-pick-help,
+.help-card{
+  display:none!important;
+}
