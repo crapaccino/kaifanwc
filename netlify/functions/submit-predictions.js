@@ -1,6 +1,7 @@
 const { client, json } = require('./_supabase');
 
 const LOCK_OFFSET_MS = 0;
+const ROUND2_LATE_START_MS = Date.parse('2026-06-19T19:00:00.000Z');
 
 function normalizeNickname(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -8,6 +9,16 @@ function normalizeNickname(value) {
 
 function isValidScore(value) {
   return Number.isInteger(value) && value >= 0 && value <= 20;
+}
+
+function isRound2(round) {
+  return /round\s*2/i.test(String(round || ''));
+}
+
+function openForThisSubmission(match, round) {
+  const kickoff = new Date(match.kickoff).getTime();
+  if (isRound2(round) && kickoff < ROUND2_LATE_START_MS) return false;
+  return kickoff - LOCK_OFFSET_MS > Date.now();
 }
 
 exports.handler = async (event) => {
@@ -51,8 +62,7 @@ exports.handler = async (event) => {
 
     if (rErr) throw rErr;
 
-    const now = Date.now();
-    const openMatches = roundMatches.filter(m => new Date(m.kickoff).getTime() - LOCK_OFFSET_MS > now);
+    const openMatches = roundMatches.filter(m => openForThisSubmission(m, round));
     const openIds = openMatches.map(m => String(m.id));
     const submittedIds = new Set(ids.map(String));
 
@@ -65,7 +75,7 @@ exports.handler = async (event) => {
     const invalidMatch = [...submittedIds].find(id => !openIds.includes(id));
     if (invalidMatch) {
       return json(400, {
-        error: 'One or more selected matches has already kicked off and can no longer be picked.'
+        error: 'One or more selected matches is no longer open for picks.'
       });
     }
 
