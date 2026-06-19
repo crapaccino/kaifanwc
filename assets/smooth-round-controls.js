@@ -40,7 +40,6 @@
     const matches = roundMatches();
     matches.forEach(match => {
       const winner = ['home', 'draw', 'away'][randomInt(0, 2)];
-      const [homeScore, awayScore] = randomScoreForWinner(winner);
       const winnerButton = match.querySelector(`[data-pick$=":${winner}"]`);
       if (winnerButton) winnerButton.click();
     });
@@ -74,7 +73,10 @@
     controls.id = 'smoothRoundControls';
     controls.className = 'action-bar smooth-round-top-actions';
     controls.innerHTML = '<button type="button" class="secondary" data-smooth-random>Random Pick All</button><button type="button" data-smooth-submit>Lock in picks</button>';
-    matches.prepend(controls);
+
+    const deadline = matches.querySelector('.round-lock.open-notice');
+    if (deadline) deadline.insertAdjacentElement('afterend', controls);
+    else matches.prepend(controls);
 
     controls.querySelector('[data-smooth-random]').onclick = randomizeAll;
     controls.querySelector('[data-smooth-submit]').onclick = lockInPicks;
