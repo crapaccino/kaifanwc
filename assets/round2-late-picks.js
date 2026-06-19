@@ -21,15 +21,8 @@
     return data;
   }
 
-  function nickname() {
-    return normalize(localStorage.getItem('kaifanwc_name'));
-  }
-
-  function getState() {
-    if (!statePromise) statePromise = api('get-state');
-    return statePromise;
-  }
-
+  function nickname() { return normalize(localStorage.getItem('kaifanwc_name')); }
+  function getState() { if (!statePromise) statePromise = api('get-state'); return statePromise; }
   function getPlayer() {
     const name = nickname();
     if (!name) return Promise.resolve({ predictions: [] });
@@ -37,41 +30,22 @@
     return playerPromise;
   }
 
-  function isRound2(match) {
-    return LATE_ROUND_RE.test(String(match.round || ''));
-  }
-
+  function isRound2(match) { return LATE_ROUND_RE.test(String(match.round || '')); }
   function isMexicoSouthKorea(match) {
     const teams = [normalize(match.home), normalize(match.away)];
     return teams.includes('mexico') && teams.includes('south korea');
   }
+  function isLateEligible(match) { return isRound2(match) && !isMexicoSouthKorea(match); }
+  function matchOpen(match) { return new Date(match.kickoff).getTime() > Date.now(); }
 
-  function isLateEligible(match) {
-    return isRound2(match) && !isMexicoSouthKorea(match);
-  }
-
-  function matchOpen(match) {
-    return new Date(match.kickoff).getTime() > Date.now();
-  }
-
-  function teamBlock(team, side) {
-    return `<div class="team ${side}"><span class="team-name">${team}</span></div>`;
-  }
-
-  function randomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
-
+  function teamBlock(team, side) { return `<div class="team ${side}"><span class="team-name">${team}</span></div>`; }
+  function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
   function randomScoreForWinner(winner) {
-    if (winner === 'draw') {
-      const score = randomInt(0, 3);
-      return [score, score];
-    }
+    if (winner === 'draw') { const score = randomInt(0, 3); return [score, score]; }
     const loserScore = randomInt(0, 2);
     const winnerScore = randomInt(loserScore + 1, Math.min(loserScore + 4, 6));
     return winner === 'home' ? [winnerScore, loserScore] : [loserScore, winnerScore];
   }
-
   function randomizeRemaining(remaining) {
     remaining.forEach(match => {
       const winner = ['home', 'draw', 'away'][randomInt(0, 2)];
@@ -94,9 +68,7 @@
   async function prepare() {
     const [main, player] = await Promise.all([getState(), getPlayer()]);
     savedMatchIds = new Set((player.predictions || []).map(prediction => String(prediction.match_id)));
-    openMatches = (main.matches || [])
-      .filter(match => isLateEligible(match) && matchOpen(match))
-      .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
+    openMatches = (main.matches || []).filter(match => isLateEligible(match) && matchOpen(match)).sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
     currentRound = openMatches[0]?.round || null;
     return { main, player };
   }
@@ -122,31 +94,10 @@
   }
 
   function bindLateInputs() {
-    document.querySelectorAll('[data-late-pick]').forEach(button => {
-      button.onclick = () => {
-        const [id, value] = button.dataset.latePick.split(':');
-        picks[id] = { ...(picks[id] || {}), predicted_winner: value };
-        renderLateRound();
-      };
-    });
-    document.querySelectorAll('[data-late-score]').forEach(input => {
-      input.oninput = () => {
-        const [id, side] = input.dataset.lateScore.split(':');
-        picks[id] = { ...(picks[id] || {}) };
-        picks[id][side === 'home' ? 'home_score' : 'away_score'] = input.value === '' ? null : Number(input.value);
-      };
-    });
-    document.querySelectorAll('[data-late-random]').forEach(button => {
-      button.onclick = async () => {
-        await prepare();
-        const remaining = openMatches.filter(match => !savedMatchIds.has(String(match.id)));
-        randomizeRemaining(remaining);
-        await renderLateRound();
-      };
-    });
-    document.querySelectorAll('[data-late-submit]').forEach(button => {
-      button.onclick = submitLateRound;
-    });
+    document.querySelectorAll('[data-late-pick]').forEach(button => { button.onclick = () => { const [id, value] = button.dataset.latePick.split(':'); picks[id] = { ...(picks[id] || {}), predicted_winner: value }; renderLateRound(); }; });
+    document.querySelectorAll('[data-late-score]').forEach(input => { input.oninput = () => { const [id, side] = input.dataset.lateScore.split(':'); picks[id] = { ...(picks[id] || {}) }; picks[id][side === 'home' ? 'home_score' : 'away_score'] = input.value === '' ? null : Number(input.value); }; });
+    document.querySelectorAll('[data-late-random]').forEach(button => { button.onclick = async () => { await prepare(); const remaining = openMatches.filter(match => !savedMatchIds.has(String(match.id))); randomizeRemaining(remaining); await renderLateRound(); }; });
+    document.querySelectorAll('[data-late-submit]').forEach(button => { button.onclick = submitLateRound; });
   }
 
   async function renderLateRound() {
@@ -154,33 +105,20 @@
       await prepare();
       document.querySelectorAll('#roundTabs button').forEach(button => button.classList.remove('active'));
       $('#lateRound2Btn')?.classList.add('active');
-
       const remaining = openMatches.filter(match => !savedMatchIds.has(String(match.id)));
       $('#submitBtn').style.display = 'block';
       $('#submitBtn').disabled = false;
       $('#submitBtn').textContent = 'Lock in remaining Round 2 picks';
       $('#submitBtn').onclick = submitLateRound;
-
-      if (!remaining.length) {
-        $('#matches').innerHTML = '<div class="notice"><b>Round 2 is already locked for you.</b><br><span class="small">You have already submitted the remaining open Round 2 matches.</span></div>';
-        return;
-      }
-
+      if (!remaining.length) { $('#matches').innerHTML = '<div class="notice"><b>Round 2 is already locked for you.</b><br><span class="small">You have already submitted the remaining open Round 2 matches.</span></div>'; return; }
       const grouped = {};
-      remaining.forEach(match => {
-        const day = fmtDay(match.kickoff);
-        if (!grouped[day]) grouped[day] = [];
-        grouped[day].push(match);
-      });
-
+      remaining.forEach(match => { const day = fmtDay(match.kickoff); if (!grouped[day]) grouped[day] = []; grouped[day].push(match); });
       const first = remaining[0];
       const notice = `<div class="round-lock open-notice">🔓 Late Round 2 is open only for matches from USA vs Australia onwards. The first four games are missed. Deadline: ${fmtFull(first.kickoff)} Kuwait time.</div>`;
       const topControls = `<div class="action-bar late-top-actions"><button type="button" class="secondary" data-late-random>Random Pick All</button><button type="button" data-late-submit>Lock in remaining Round 2 picks</button></div>`;
       $('#matches').innerHTML = notice + topControls + Object.entries(grouped).map(([day, games]) => `<div class="day-header">${day}</div>${games.map(renderMatch).join('')}`).join('');
       bindLateInputs();
-    } catch (error) {
-      $('#status').innerHTML = `<span class="bad">${error.message}</span>`;
-    }
+    } catch (error) { $('#status').innerHTML = `<span class="bad">${error.message}</span>`; }
   }
 
   async function submitLateRound() {
@@ -189,36 +127,17 @@
       if (!name) throw new Error('Enter your name first.');
       await prepare();
       const remaining = openMatches.filter(match => !savedMatchIds.has(String(match.id)));
-      const missing = remaining.find(match => {
-        const pick = picks[match.id] || {};
-        return !pick.predicted_winner || !Number.isInteger(pick.home_score) || !Number.isInteger(pick.away_score);
-      });
+      const missing = remaining.find(match => { const pick = picks[match.id] || {}; return !pick.predicted_winner || !Number.isInteger(pick.home_score) || !Number.isInteger(pick.away_score); });
       if (missing) throw new Error('Please predict the winner/draw and both scores for every remaining Round 2 match.');
-
-      const predictions = remaining.map(match => {
-        const pick = picks[match.id];
-        return { match_id: match.id, predicted_winner: pick.predicted_winner, home_score: pick.home_score, away_score: pick.away_score };
-      });
-      const result = await api('submit-predictions', { method: 'POST', body: JSON.stringify({ nickname: name, predictions }) });
+      const predictions = remaining.map(match => { const pick = picks[match.id]; return { match_id: match.id, predicted_winner: pick.predicted_winner, home_score: pick.home_score, away_score: pick.away_score }; });
+      const result = await api('submit-r2-late-predictions', { method: 'POST', body: JSON.stringify({ nickname: name, predictions }) });
       $('#status').innerHTML = `<span class="ok">Locked in ${result.saved} remaining Round 2 picks for ${displayName(name)}.</span>`;
-      statePromise = null;
-      playerPromise = null;
-      await renderLateRound();
-    } catch (error) {
-      $('#status').innerHTML = `<span class="bad">${error.message}</span>`;
-    }
+      statePromise = null; playerPromise = null; await renderLateRound();
+    } catch (error) { $('#status').innerHTML = `<span class="bad">${error.message}</span>`; }
   }
 
   let queued = false;
-  function queueButtonCheck() {
-    if (queued) return;
-    queued = true;
-    requestAnimationFrame(() => {
-      queued = false;
-      addButton();
-    });
-  }
-
+  function queueButtonCheck() { if (queued) return; queued = true; requestAnimationFrame(() => { queued = false; addButton(); }); }
   const observer = new MutationObserver(queueButtonCheck);
   observer.observe(document.body, { childList: true, subtree: true });
   window.addEventListener('load', queueButtonCheck);
