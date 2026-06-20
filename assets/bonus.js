@@ -1,4 +1,5 @@
 (() => {
+  const BONUS_PREDICTIONS_CLOSED = true;
   const FLAG_CODES = { France:'fr', England:'gb-eng', Spain:'es', Argentina:'ar', Brazil:'br', Norway:'no', Germany:'de' };
   const flagImg = code => code ? '<img class="team-flag-img" src="https://flagcdn.com/'+code+'.svg" alt="" loading="lazy">' : '';
   const pickLabel = opt => opt.code ? '<span class="pick-label-flag">'+flagImg(opt.code)+'</span><span>'+opt.label+'</span>' : '<span>'+opt.label+'</span>';
@@ -55,7 +56,7 @@
   }
 
   async function syncLockedPicks(){
-    if(syncing || !isLocked() || !nickname()) return;
+    if(BONUS_PREDICTIONS_CLOSED || syncing || !isLocked() || !nickname()) return;
     const p = readPicks();
     const missing = CATEGORIES.find(c => !p[c.key] || !String(p[c.key]).trim());
     if(missing) return;
@@ -87,22 +88,22 @@
   }
 
   function selectedSummary(picks){
-    if(!isLocked()) return '';
     const rows = CATEGORIES.map(cat => {
       const opt = cat.options.find(o => o.name === picks[cat.key]);
       if(!opt) return '';
       return '<div class="bonus-locked-row"><span>'+cat.title+'</span><b>'+(opt.code ? '<span class="bonus-option-main">'+pickLabel(opt)+'</span>' : opt.label)+'</b></div>';
     }).join('');
-    return '<div class="bonus-card bonus-locked-summary"><h2>Tournament Predictions Saved</h2><p class="bonus-note">Your tournament picks are saved, but bonus picks are currently reopened. You may change and save them again.</p>'+rows+'</div>';
+    if(!rows) return '';
+    return '<div class="bonus-card bonus-locked-summary"><h2>Tournament Predictions Saved</h2><p class="bonus-note">Your saved tournament bonus picks are shown below. Tournament bonus predictions are now closed, so they can no longer be changed.</p>'+rows+'</div>';
   }
 
   function renderCategory(cat, picks) {
     const val = picks[cat.key] || '';
     return '<div class="bonus-card">' +
       '<h3>'+cat.title+' — '+cat.points+' pts</h3>' +
-      '<p class="bonus-note">Choose one favourite, or pick the field option to cover everyone not listed.</p>' +
+      '<p class="bonus-note">'+(BONUS_PREDICTIONS_CLOSED ? 'Voting is closed for this category.' : 'Choose one favourite, or pick the field option to cover everyone not listed.')+'</p>' +
       '<div class="bonus-grid">' +
-      cat.options.map(opt => '<button type="button" class="bonus-option '+(val===opt.name?'active':'')+'" data-bonus-pick="'+cat.key+'" data-value="'+opt.name+'"><span class="bonus-option-main">'+pickLabel(opt)+'</span><span class="bonus-rank">'+opt.chance+'</span></button>').join('') +
+      cat.options.map(opt => '<button type="button" class="bonus-option '+(val===opt.name?'active':'')+'" data-bonus-pick="'+cat.key+'" data-value="'+opt.name+'" '+(BONUS_PREDICTIONS_CLOSED?'disabled aria-disabled="true"':'')+'><span class="bonus-option-main">'+pickLabel(opt)+'</span><span class="bonus-rank">'+opt.chance+'</span></button>').join('') +
       '</div></div>';
   }
 
@@ -116,6 +117,13 @@
       if (!matches) return;
       const picks = readPicks();
       if(isLocked()) syncLockedPicks();
+
+      if(BONUS_PREDICTIONS_CLOSED){
+        matches.innerHTML = selectedSummary(picks) + '<div class="bonus-card"><h2>Tournament Bonus Predictions Closed</h2><p class="bonus-note">Voting is closed. Existing saved picks remain visible, but no one can submit, clear, or change tournament bonus predictions anymore.</p></div>' +
+          CATEGORIES.map(c => renderCategory(c, picks)).join('');
+        return;
+      }
+
       matches.innerHTML = selectedSummary(picks) + '<div class="bonus-card"><h2>Bonus Predictions Reopened</h2><p class="bonus-note">Tournament bonus predictions are open until further notice. You can submit them now, or change your previous bonus picks and save again.</p></div>' +
         CATEGORIES.map(c => renderCategory(c, picks)).join('') +
         '<div class="bonus-card"><div class="bonus-actions"><button id="lockBonusBtn">'+(isLocked()?'Save updated bonus predictions':'Save bonus predictions')+'</button><button id="clearBonusBtn" class="secondary">Clear bonus picks</button></div><p class="bonus-status" id="bonusStatus">'+(isLocked()?'<span class="ok">Your current tournament predictions are saved. You can still change them while bonus picks are reopened.</span>':'Pick all 4 categories, then save them.')+'</p></div>';
