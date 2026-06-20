@@ -1,5 +1,6 @@
 const { client, json } = require('./_supabase');
 
+const BONUS_PREDICTIONS_CLOSED = true;
 const CATEGORIES = ['winner', 'potm', 'golden_boot', 'golden_glove'];
 
 function normalizeNickname(value) {
@@ -12,6 +13,10 @@ function cleanPick(value) {
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: 'POST only' });
+
+  if (BONUS_PREDICTIONS_CLOSED) {
+    return json(403, { error: 'Tournament bonus predictions are now closed.' });
+  }
 
   try {
     const body = JSON.parse(event.body || '{}');
