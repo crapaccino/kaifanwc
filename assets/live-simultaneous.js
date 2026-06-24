@@ -59,12 +59,12 @@
       return { kind: 'winnerAlive', cls: 'perfect', icon: '✅', label: awayLabel, goalsAway: away };
     }
     if (rightWinner) {
-      return { kind: 'winnerDead', cls: 'perfect', icon: '✅', label: `${awayLabel} - score impossible`, goalsAway: away };
+      return { kind: 'winnerDead', cls: 'perfect', icon: '✅', label: `${awayLabel} - exact score impossible`, goalsAway: away };
     }
     if (scoreStillAlive) {
       return { kind: 'alive', cls: 'close', icon: '🟡', label: 'Still alive', goalsAway: away };
     }
-    return { kind: 'wrong', cls: 'wrong', icon: '🔴', label: 'Dead pick', goalsAway: away };
+    return { kind: 'alive', cls: 'close', icon: '🟡', label: 'Winner still possible - exact score impossible', goalsAway: away };
   }
 
   function crowdPick(summary) {
