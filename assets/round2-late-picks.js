@@ -1,9 +1,9 @@
 (() => {
-  const LATE_ROUND_RE = /round\s*2/i;
+  const LATE_ROUND_RE = /round\s*3/i;
+  const ROUND_LABEL = 'Round 3';
   const picks = {};
   let statePromise = null;
   let playerPromise = null;
-  let currentRound = null;
   let openMatches = [];
   let savedMatchIds = new Set();
 
@@ -30,13 +30,9 @@
     return playerPromise;
   }
 
-  function isRound2(match) { return LATE_ROUND_RE.test(String(match.round || '')); }
-  function isMexicoSouthKorea(match) {
-    const teams = [normalize(match.home), normalize(match.away)];
-    return teams.includes('mexico') && teams.includes('south korea');
-  }
-  function isLateEligible(match) { return isRound2(match) && !isMexicoSouthKorea(match); }
+  function isLateRound(match) { return LATE_ROUND_RE.test(String(match.round || '')); }
   function matchOpen(match) { return new Date(match.kickoff).getTime() > Date.now(); }
+  function isLateEligible(match) { return isLateRound(match) && matchOpen(match); }
 
   function teamBlock(team, side) { return `<div class="team ${side}"><span class="team-name">${team}</span></div>`; }
   function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -68,24 +64,24 @@
   async function prepare() {
     const [main, player] = await Promise.all([getState(), getPlayer()]);
     savedMatchIds = new Set((player.predictions || []).map(prediction => String(prediction.match_id)));
-    openMatches = (main.matches || []).filter(match => isLateEligible(match) && matchOpen(match)).sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
-    currentRound = openMatches[0]?.round || null;
+    openMatches = (main.matches || []).filter(isLateEligible).sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
     return { main, player };
   }
 
   async function shouldShowLateButton() {
     await prepare();
-    return openMatches.length > 0;
+    const remaining = openMatches.filter(match => !savedMatchIds.has(String(match.id)));
+    return remaining.length > 0;
   }
 
   async function addButton() {
     const tabs = $('#roundTabs');
-    if (!tabs || $('#lateRound2Btn')) return;
+    if (!tabs || $('#lateRound3Btn')) return;
     if (!(await shouldShowLateButton())) return;
     const button = document.createElement('button');
-    button.id = 'lateRound2Btn';
+    button.id = 'lateRound3Btn';
     button.type = 'button';
-    button.textContent = 'Round 2 Late 🔓';
+    button.textContent = 'Round 3 Late 🔓';
     button.onclick = renderLateRound;
     tabs.appendChild(button);
   }
@@ -103,18 +99,18 @@
       playerPromise = null;
       await prepare();
       document.querySelectorAll('#roundTabs button').forEach(button => button.classList.remove('active'));
-      $('#lateRound2Btn')?.classList.add('active');
+      $('#lateRound3Btn')?.classList.add('active');
       const remaining = openMatches.filter(match => !savedMatchIds.has(String(match.id)));
       $('#submitBtn').style.display = 'block';
       $('#submitBtn').disabled = false;
-      $('#submitBtn').textContent = 'Lock in remaining Round 2 picks';
+      $('#submitBtn').textContent = 'Lock in remaining Round 3 picks';
       $('#submitBtn').onclick = submitLateRound;
-      if (!remaining.length) { $('#matches').innerHTML = '<div class="notice"><b>Round 2 is already locked for you.</b><br><span class="small">You have already submitted the remaining open Round 2 matches.</span></div>'; return; }
+      if (!remaining.length) { $('#matches').innerHTML = '<div class="notice"><b>Round 3 is already locked for you.</b><br><span class="small">You have already submitted the remaining open Round 3 matches.</span></div>'; return; }
       const grouped = {};
       remaining.forEach(match => { const day = fmtDay(match.kickoff); if (!grouped[day]) grouped[day] = []; grouped[day].push(match); });
       const first = remaining[0];
-      const notice = `<div class="round-lock open-notice">🔓 Late Round 2 is open only for matches from USA vs Australia onwards. The first four games are missed. Deadline: ${fmtFull(first.kickoff)} Kuwait time.</div>`;
-      const topControls = `<div class="action-bar late-top-actions"><button type="button" class="secondary" data-late-random>Random Pick All</button><button type="button" data-late-submit>Lock in remaining Round 2 picks</button></div>`;
+      const notice = `<div class="round-lock open-notice">🔓 Late Round 3 is open only for matches that have not kicked off yet. Each game locks at its own kickoff. Next deadline: ${fmtFull(first.kickoff)} Kuwait time.</div>`;
+      const topControls = `<div class="action-bar late-top-actions"><button type="button" class="secondary" data-late-random>Random Pick All</button><button type="button" data-late-submit>Lock in remaining Round 3 picks</button></div>`;
       $('#matches').innerHTML = notice + topControls + Object.entries(grouped).map(([day, games]) => `<div class="day-header">${day}</div>${games.map(renderMatch).join('')}`).join('');
       bindLateInputs();
     } catch (error) { $('#status').innerHTML = `<span class="bad">${error.message}</span>`; }
@@ -127,10 +123,10 @@
       await prepare();
       const remaining = openMatches.filter(match => !savedMatchIds.has(String(match.id)));
       const missing = remaining.find(match => { const pick = picks[match.id] || {}; return !pick.predicted_winner || !Number.isInteger(pick.home_score) || !Number.isInteger(pick.away_score); });
-      if (missing) throw new Error('Please predict the winner/draw and both scores for every remaining Round 2 match.');
+      if (missing) throw new Error('Please predict the winner/draw and both scores for every remaining Round 3 match.');
       const predictions = remaining.map(match => { const pick = picks[match.id]; return { match_id: match.id, predicted_winner: pick.predicted_winner, home_score: pick.home_score, away_score: pick.away_score }; });
       const result = await api('submit-predictions', { method: 'POST', body: JSON.stringify({ nickname: name, predictions }) });
-      $('#status').innerHTML = `<span class="ok">Locked in ${result.saved} remaining Round 2 picks for ${displayName(name)}.</span>`;
+      $('#status').innerHTML = `<span class="ok">Locked in ${result.saved} remaining Round 3 picks for ${displayName(name)}.</span>`;
       statePromise = null; playerPromise = null; await renderLateRound();
     } catch (error) { $('#status').innerHTML = `<span class="bad">${error.message}</span>`; }
   }
