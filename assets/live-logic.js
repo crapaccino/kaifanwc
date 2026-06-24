@@ -125,11 +125,11 @@
         } else if (rightWinner && scoreStillAlive) {
           setStatus(row, { kind: 'winnerAlive', cls: 'perfect', icon: '✅', label: awayLabel, goalsAway: away });
         } else if (rightWinner) {
-          setStatus(row, { kind: 'winnerDead', cls: 'perfect', icon: '✅', label: `${awayLabel} - score impossible`, goalsAway: away });
+          setStatus(row, { kind: 'winnerDead', cls: 'perfect', icon: '✅', label: `${awayLabel} - exact score impossible`, goalsAway: away });
         } else if (scoreStillAlive) {
-          setStatus(row, { kind: 'alive', cls: 'close', icon: '🟡', label: 'Still alive' });
+          setStatus(row, { kind: 'alive', cls: 'close', icon: '🟡', label: 'Still alive', goalsAway: away });
         } else {
-          setStatus(row, { kind: 'wrong', cls: 'wrong', icon: '🔴', label: 'Dead pick' });
+          setStatus(row, { kind: 'alive', cls: 'close', icon: '🟡', label: 'Winner still possible - exact score impossible', goalsAway: away });
         }
       });
 
