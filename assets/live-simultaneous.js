@@ -1,4 +1,5 @@
 (() => {
+  const STATUS_ORDER = { exact: 0, winnerAlive: 1, winnerDead: 2, alive: 3, wrong: 4, neutral: 5 };
   let rendering = false;
   let lastKey = '';
 
@@ -11,20 +12,59 @@
     return !!document.querySelector('#roundTabs button.active[data-tab="live"]');
   }
 
-  function actualWinnerKey(match) {
-    if (match.home_score == null || match.away_score == null) return null;
-    if (Number(match.home_score) > Number(match.away_score)) return 'home';
-    if (Number(match.away_score) > Number(match.home_score)) return 'away';
-    return 'draw';
+  function winnerLabel(home, away, homeScore, awayScore) {
+    if (homeScore > awayScore) return home;
+    if (awayScore > homeScore) return away;
+    return 'Draw';
+  }
+
+  function predictedWinnerText(prediction, match) {
+    if (prediction.predicted_winner === 'home') return match.home;
+    if (prediction.predicted_winner === 'away') return match.away;
+    return 'Draw';
+  }
+
+  function isFullTime(match) {
+    return Date.now() >= new Date(match.kickoff).getTime() + (2 * 60 * 60 * 1000);
   }
 
   function statusForPrediction(prediction, match) {
-    const winner = actualWinnerKey(match);
-    if (!winner) return { label: 'Waiting score', cls: 'neutral', icon: '⏳' };
-    const dist = Math.abs(Number(prediction.home_score) - Number(match.home_score)) + Math.abs(Number(prediction.away_score) - Number(match.away_score));
-    if (dist === 0) return { label: 'Perfect', cls: 'perfect', icon: '🥇' };
-    if (prediction.predicted_winner === winner) return { label: dist <= 2 ? `${dist} goal${dist === 1 ? '' : 's'} away` : 'Winner correct', cls: 'close', icon: dist <= 2 ? '🎯' : '🟡' };
-    return { label: 'Wrong', cls: 'wrong', icon: '🔴' };
+    if (match.home_score == null || match.away_score == null) {
+      return { kind: 'neutral', label: 'Waiting score', cls: 'neutral', icon: '⏳', goalsAway: 999 };
+    }
+
+    const currentHome = Number(match.home_score);
+    const currentAway = Number(match.away_score);
+    const predictedHome = Number(prediction.home_score);
+    const predictedAway = Number(prediction.away_score);
+    const fullTime = isFullTime(match);
+    const currentWinner = winnerLabel(match.home, match.away, currentHome, currentAway);
+    const predictedWinner = predictedWinnerText(prediction, match);
+    const away = Math.abs(predictedHome - currentHome) + Math.abs(predictedAway - currentAway);
+    const exactScore = away === 0;
+    const rightWinner = predictedWinner === currentWinner;
+    const scoreStillAlive = currentHome <= predictedHome && currentAway <= predictedAway;
+    const awayLabel = `${away} goal${away === 1 ? '' : 's'} away`;
+
+    if (exactScore) {
+      return { kind: 'exact', cls: 'perfect', icon: '🥇', label: fullTime ? 'Perfect final score' : 'Perfect score', goalsAway: 0 };
+    }
+    if (rightWinner && fullTime) {
+      return { kind: 'winnerDead', cls: 'perfect', icon: '✅', label: `Correct winner - ${awayLabel}`, goalsAway: away };
+    }
+    if (fullTime) {
+      return { kind: 'wrong', cls: 'wrong', icon: '🔴', label: 'Wrong final result', goalsAway: away };
+    }
+    if (rightWinner && scoreStillAlive) {
+      return { kind: 'winnerAlive', cls: 'perfect', icon: '✅', label: awayLabel, goalsAway: away };
+    }
+    if (rightWinner) {
+      return { kind: 'winnerDead', cls: 'perfect', icon: '✅', label: `${awayLabel} - score impossible`, goalsAway: away };
+    }
+    if (scoreStillAlive) {
+      return { kind: 'alive', cls: 'close', icon: '🟡', label: 'Still alive', goalsAway: away };
+    }
+    return { kind: 'wrong', cls: 'wrong', icon: '🔴', label: 'Dead pick', goalsAway: away };
   }
 
   function crowdPick(summary) {
@@ -40,24 +80,37 @@
     return `<div class="percent-row"><div class="percent-label"><span>${item.label}</span><b>${item.percent}%</b></div><div class="percent-track"><div class="percent-fill ${cls}" style="width:${item.percent}%"></div></div><small>${item.count} pick${item.count === 1 ? '' : 's'}</small></div>`;
   }
 
+  function predictionRows(game) {
+    const match = game.match;
+    return (game.predictions || [])
+      .map((prediction, originalIndex) => ({ prediction, status: statusForPrediction(prediction, match), originalIndex }))
+      .sort((a, b) => {
+        const rankA = STATUS_ORDER[a.status.kind] ?? 99;
+        const rankB = STATUS_ORDER[b.status.kind] ?? 99;
+        if (rankA !== rankB) return rankA - rankB;
+        if (a.status.goalsAway !== b.status.goalsAway) return a.status.goalsAway - b.status.goalsAway;
+        return a.originalIndex - b.originalIndex;
+      })
+      .map(({ prediction, status }) => `<div class="live-pick-row ${status.cls}${status.kind === 'exact' ? ' exact-score' : ''}">
+        <div><b>${displayName(prediction.nickname)}</b><span>${prediction.predicted_winner_label}</span><em class="status-chip ${status.cls}${status.kind === 'exact' ? ' exact-score' : ''}">${status.icon} ${status.label}</em></div>
+        <strong>${prediction.home_score} - ${prediction.away_score}</strong>
+      </div>`)
+      .join('');
+  }
+
   function renderGame(game, index, totalGames) {
     const match = game.match;
     const summary = game.summary || { total: 0, home: { label: match.home, count: 0, percent: 0 }, draw: { label: 'Draw', count: 0, percent: 0 }, away: { label: match.away, count: 0, percent: 0 } };
     const actual = match.home_score != null && match.away_score != null ? `${match.home_score} – ${match.away_score}` : fmtTime(match.kickoff);
     const crowd = crowdPick(summary);
-    const rows = (game.predictions || []).map(prediction => {
-      const status = statusForPrediction(prediction, match);
-      return `<div class="live-pick-row ${status.cls}">
-        <div><b>${displayName(prediction.nickname)}</b><span>${prediction.predicted_winner_label}</span><em class="status-chip ${status.cls}">${status.icon} ${status.label}</em></div>
-        <strong>${prediction.home_score} - ${prediction.away_score}</strong>
-      </div>`;
-    }).join('');
+    const rows = predictionRows(game);
+    const fullTime = isFullTime(match);
 
     return `
       <div class="live-card" data-simultaneous-game="${match.id}">
-        <div class="live-badge">${totalGames > 1 ? `SIMULTANEOUS ${index + 1}/${totalGames}` : 'LIVE / LATEST 🔴'}</div>
+        <div class="live-badge ${fullTime ? 'full-time-badge' : ''}">${fullTime ? 'FULL TIME ✅' : (totalGames > 1 ? `SIMULTANEOUS ${index + 1}/${totalGames}` : 'LIVE / LATEST 🔴')}</div>
         <div class="match-top live-match-top">${teamBlock(match.home, 'home')}<div class="result-score">${actual}</div>${teamBlock(match.away, 'away')}</div>
-        <div class="match-info"><div class="meta-row"><span>Group ${match.group_name || ''}</span><span>${fmtFull(match.kickoff)} Kuwait</span></div></div>
+        <div class="match-info"><div class="meta-row"><span>Group ${match.group_name || ''}</span><span>${fmtFull(match.kickoff)} Kuwait</span>${fullTime ? '<span class="full-time-note">Full time</span>' : ''}</div></div>
       </div>
       ${crowd ? `<div class="live-card crowd-card"><div class="crowd-label">👥 Crowd pick</div><h2>${crowd.label}</h2><p>${crowd.percent}% of players picked this outcome.</p></div>` : ''}
       <div class="live-card">
@@ -82,7 +135,7 @@
       const games = Array.isArray(data.games) ? data.games : [];
       if (games.length <= 1) return;
 
-      const key = games.map(game => `${game.match.id}:${game.match.home_score ?? ''}-${game.match.away_score ?? ''}:${game.predictions?.length || 0}`).join('|');
+      const key = games.map(game => `${game.match.id}:${game.match.home_score ?? ''}-${game.match.away_score ?? ''}:${game.predictions?.length || 0}:${isFullTime(game.match) ? 'ft' : 'live'}`).join('|');
       if (key === lastKey && document.querySelector('[data-simultaneous-game]')) return;
       lastKey = key;
 
