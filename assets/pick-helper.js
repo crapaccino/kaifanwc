@@ -7,6 +7,7 @@
     "Egypt":69,"Tunisia":68,"Saudi Arabia":67,"South Africa":67,"Qatar":66,"Uzbekistan":66,"Iraq":65,"DR Congo":65,
     "Panama":64,"Jordan":63,"New Zealand":63,"Cape Verde":62,"Bosnia":62,"Paraguay":62,"Haiti":60,"Curacao":58
   };
+  const KNOCKOUT_RE = /(round of 32|round of 16|quarter|semi|final)/i;
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   function percentModel(home,away){
     const h=RATINGS[home]||70, a=RATINGS[away]||70, diff=h-a;
@@ -41,14 +42,25 @@
     const p=percentModel(home,away), scores=expectedScores(home,away,p);
     return '<div class="pick-helper-card" data-helper="1"><div class="helper-title">Match insight</div><div class="helper-edge">'+edge(p)+' - estimated from team strength</div>'+row(home,p.home)+row('Draw',p.draw)+row(away,p.away)+'<div class="helper-scores"><span>Common scores</span><b>'+scores.join(' / ')+'</b></div><div class="helper-note">Use this as a simple guide, not a guarantee.</div></div>';
   }
+  function activeRoundName(){
+    const active=document.querySelector('#roundTabs button.active[data-tab]');
+    return String(active?.dataset?.tab||active?.textContent||'');
+  }
+  function isKnockoutRound(){
+    return KNOCKOUT_RE.test(activeRoundName());
+  }
   function fixDeadlineText(){
     const notice=document.querySelector('.round-lock.open-notice');
     if(!notice || notice.dataset.fixedDeadline==='1')return;
     const text=notice.textContent||'';
     if(text.indexOf('Deadline:')===-1)return;
-    notice.textContent=text
+    let updated=text
       .replace('Picks close 2 hours before the first kickoff.','Picks lock at the first kickoff.')
       .replace('Picks become final when you press Lock in picks.','Picks lock at the first kickoff.');
+    if(isKnockoutRound()){
+      updated += ' 🏆 Knockout rule: predict the score at the final whistle, including extra time if played. If it is level after extra time, choose Draw. Penalty shootouts do not count.';
+    }
+    notice.textContent=updated;
     notice.dataset.fixedDeadline='1';
   }
   function inject(){
