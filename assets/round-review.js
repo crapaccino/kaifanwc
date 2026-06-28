@@ -38,11 +38,6 @@
     });
   }
 
-  function roundStart(matches, round){
-    const first = (matches || []).filter(m => m.round === round).sort((a,b)=>new Date(a.kickoff)-new Date(b.kickoff))[0];
-    return first ? new Date(first.kickoff) : null;
-  }
-
   function isFinishedOrPast(matches, round){
     const games = (matches || []).filter(m => m.round === round);
     if(!games.length) return false;
@@ -118,9 +113,10 @@
 
       const live = tabs.querySelector('[data-tab="live"]');
       const leaderboard = tabs.querySelector('[data-tab="leaderboard"]');
+      const insertBefore = leaderboard || live || null;
       const toggle = makeButton(pastOpen ? '📂 Past Rounds ▲' : '📂 Past Rounds ▼', 'past-rounds-toggle');
       toggle.onclick = () => { pastOpen = !pastOpen; inject(); };
-      tabs.insertBefore(toggle, leaderboard || live || null);
+      tabs.insertBefore(toggle, insertBefore);
 
       const menu = document.createElement('div');
       menu.className = 'past-rounds-menu' + (pastOpen ? ' open' : '');
@@ -130,7 +126,7 @@
         btn.onclick = () => renderReview(round);
         menu.appendChild(btn);
       });
-      tabs.insertBefore(menu, leaderboard || live || null);
+      tabs.insertBefore(menu, insertBefore);
     }catch(_){
     }finally{
       injecting = false;
@@ -138,10 +134,6 @@
   }
 
   window.addEventListener('load', () => {
-    const tabs = document.querySelector('#roundTabs');
-    if(tabs){
-      new MutationObserver(() => setTimeout(inject, 0)).observe(tabs, {childList:true});
-    }
     setInterval(inject, 1500);
     inject();
   });
