@@ -7,6 +7,8 @@
 
   let pastOpen = false;
   let injecting = false;
+  let cachedPastRounds = null;
+  let scheduled = false;
 
   async function fetchJson(path){
     const r = await fetch('/.netlify/functions/' + path + (path.includes('?') ? '&' : '?') + 'ts=' + Date.now());
@@ -47,9 +49,11 @@
   }
 
   async function pastRounds(){
+    if(cachedPastRounds) return cachedPastRounds;
     const state = await fetchJson('get-state');
     const rounds = sortedRounds(state.matches || []);
-    return rounds.filter(round => isFinishedOrPast(state.matches || [], round));
+    cachedPastRounds = rounds.filter(round => isFinishedOrPast(state.matches || [], round));
+    return cachedPastRounds;
   }
 
   async function renderReview(round){
@@ -105,17 +109,18 @@
     if(injecting) return;
     const tabs = document.querySelector('#roundTabs');
     if(!tabs) return;
+    if(tabs.querySelector('.past-rounds-toggle')) return;
     injecting = true;
     try{
       const rounds = await pastRounds();
-      tabs.querySelectorAll('[data-review-round], .past-rounds-toggle, .past-rounds-menu').forEach(el => el.remove());
+      if(tabs.querySelector('.past-rounds-toggle')) return;
       if(!rounds.length) return;
 
       const live = tabs.querySelector('[data-tab="live"]');
       const leaderboard = tabs.querySelector('[data-tab="leaderboard"]');
       const insertBefore = leaderboard || live || null;
       const toggle = makeButton(pastOpen ? '📂 Past Rounds ▲' : '📂 Past Rounds ▼', 'past-rounds-toggle');
-      toggle.onclick = () => { pastOpen = !pastOpen; inject(); };
+      toggle.onclick = () => { pastOpen = !pastOpen; refreshPastRounds(); };
       tabs.insertBefore(toggle, insertBefore);
 
       const menu = document.createElement('div');
@@ -133,8 +138,27 @@
     }
   }
 
-  window.addEventListener('load', () => {
-    setInterval(inject, 1500);
+  function refreshPastRounds(){
+    const tabs = document.querySelector('#roundTabs');
+    if(!tabs) return;
+    tabs.querySelectorAll('[data-review-round], .past-rounds-toggle, .past-rounds-menu').forEach(el => el.remove());
     inject();
+  }
+
+  function scheduleInject(){
+    if(scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      inject();
+    });
+  }
+
+  window.addEventListener('load', () => {
+    const tabs = document.querySelector('#roundTabs');
+    if(tabs){
+      new MutationObserver(scheduleInject).observe(tabs, { childList:true });
+    }
+    scheduleInject();
   });
 })();
