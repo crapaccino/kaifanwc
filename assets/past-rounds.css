@@ -1,0 +1,35 @@
+.past-rounds-toggle{
+  background:#fff!important;
+  color:var(--accent)!important;
+  border:1px solid var(--line)!important;
+}
+
+.past-rounds-menu{
+  display:none;
+  grid-column:1/-1;
+  gap:8px;
+  padding:8px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 8px 22px rgba(18,26,48,.06);
+}
+
+.past-rounds-menu.open{
+  display:grid;
+}
+
+.past-rounds-menu button{
+  min-height:42px;
+  text-align:left;
+  justify-content:flex-start;
+  background:#f8fafc!important;
+  color:var(--accent)!important;
+  border:1px solid var(--line)!important;
+  font-weight:850;
+}
+
+.past-rounds-menu button.active{
+  background:var(--accent)!important;
+  color:#fff!important;
+}
