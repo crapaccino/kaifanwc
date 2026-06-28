@@ -132,6 +132,9 @@
     try {
       const response = await fetch('/.netlify/functions/get-live?ts=' + Date.now());
       const data = await response.json();
+
+      if (!isLiveTabActive()) return;
+
       const games = Array.isArray(data.games) ? data.games : [];
       if (games.length <= 1) return;
 
@@ -139,11 +142,12 @@
       if (key === lastKey && document.querySelector('[data-simultaneous-game]')) return;
       lastKey = key;
 
+      if (!isLiveTabActive()) return;
       $('#submitBtn').style.display = 'none';
       $('#matches').innerHTML = `<div class="round-lock open-notice">🔴 Showing all ${games.length} matches from the latest kickoff window.</div>` + games.map((game, index) => renderGame(game, index, games.length)).join('');
     } catch (error) {
       const status = $('#status');
-      if (status) status.innerHTML = `<span class="bad">${error.message}</span>`;
+      if (status && isLiveTabActive()) status.innerHTML = `<span class="bad">${error.message}</span>`;
     } finally {
       rendering = false;
     }
