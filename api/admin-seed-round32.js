@@ -3,31 +3,29 @@ const { client, json, requireAdmin } = require('./_supabase');
 const ROUND = 'Round of 32';
 
 const MATCHES = [
-  { round: ROUND, group_name: 'R32', home: 'South Africa', away: 'Canada', kickoff: '2026-06-28T19:00:00.000Z' },
-  { round: ROUND, group_name: 'R32', home: 'Brazil', away: 'Japan', kickoff: '2026-06-29T16:00:00.000Z' },
-  { round: ROUND, group_name: 'R32', home: 'Germany', away: 'Paraguay', kickoff: '2026-06-29T19:00:00.000Z' },
-  { round: ROUND, group_name: 'R32', home: 'Netherlands', away: 'Morocco', kickoff: '2026-06-30T16:00:00.000Z' },
-  { round: ROUND, group_name: 'R32', home: 'France', away: 'Sweden', kickoff: '2026-06-30T19:00:00.000Z' },
-  { round: ROUND, group_name: 'R32', home: 'Ivory Coast', away: 'Norway', kickoff: '2026-06-30T22:00:00.000Z' },
-  { round: ROUND, group_name: 'R32', home: 'Mexico', away: 'Ecuador', kickoff: '2026-07-01T16:00:00.000Z' },
-  { round: ROUND, group_name: 'R32', home: 'England', away: 'DR Congo', kickoff: '2026-07-01T17:00:00.000Z' },
-  { round: ROUND, group_name: 'R32', home: 'Belgium', away: 'Senegal', kickoff: '2026-07-01T19:00:00.000Z' },
-  { round: ROUND, group_name: 'R32', home: 'United States', away: 'Bosnia and Herzegovina', kickoff: '2026-07-02T16:00:00.000Z' },
-  { round: ROUND, group_name: 'R32', home: 'Spain', away: 'Austria', kickoff: '2026-07-02T19:00:00.000Z' },
-  { round: ROUND, group_name: 'R32', home: 'Portugal', away: 'Croatia', kickoff: '2026-07-03T13:00:00.000Z' },
-  { round: ROUND, group_name: 'R32', home: 'Switzerland', away: 'Algeria', kickoff: '2026-07-03T16:00:00.000Z' },
-  { round: ROUND, group_name: 'R32', home: 'Australia', away: 'Egypt', kickoff: '2026-07-03T19:00:00.000Z' },
-  { round: ROUND, group_name: 'R32', home: 'Argentina', away: 'Cape Verde', kickoff: '2026-07-03T22:00:00.000Z' },
-  { round: ROUND, group_name: 'R32', home: 'Colombia', away: 'Ghana', kickoff: '2026-07-04T01:30:00.000Z' }
+  { id: 3201, round: ROUND, group_name: 'R32', home: 'South Africa', away: 'Canada', kickoff: '2026-06-28T19:00:00.000Z' },
+  { id: 3202, round: ROUND, group_name: 'R32', home: 'Brazil', away: 'Japan', kickoff: '2026-06-29T16:00:00.000Z' },
+  { id: 3203, round: ROUND, group_name: 'R32', home: 'Germany', away: 'Paraguay', kickoff: '2026-06-29T19:00:00.000Z' },
+  { id: 3204, round: ROUND, group_name: 'R32', home: 'Netherlands', away: 'Morocco', kickoff: '2026-06-30T16:00:00.000Z' },
+  { id: 3205, round: ROUND, group_name: 'R32', home: 'France', away: 'Sweden', kickoff: '2026-06-30T19:00:00.000Z' },
+  { id: 3206, round: ROUND, group_name: 'R32', home: 'Ivory Coast', away: 'Norway', kickoff: '2026-06-30T22:00:00.000Z' },
+  { id: 3207, round: ROUND, group_name: 'R32', home: 'Mexico', away: 'Ecuador', kickoff: '2026-07-01T16:00:00.000Z' },
+  { id: 3208, round: ROUND, group_name: 'R32', home: 'England', away: 'DR Congo', kickoff: '2026-07-01T17:00:00.000Z' },
+  { id: 3209, round: ROUND, group_name: 'R32', home: 'Belgium', away: 'Senegal', kickoff: '2026-07-01T19:00:00.000Z' },
+  { id: 3210, round: ROUND, group_name: 'R32', home: 'United States', away: 'Bosnia and Herzegovina', kickoff: '2026-07-02T16:00:00.000Z' },
+  { id: 3211, round: ROUND, group_name: 'R32', home: 'Spain', away: 'Austria', kickoff: '2026-07-02T19:00:00.000Z' },
+  { id: 3212, round: ROUND, group_name: 'R32', home: 'Portugal', away: 'Croatia', kickoff: '2026-07-03T13:00:00.000Z' },
+  { id: 3213, round: ROUND, group_name: 'R32', home: 'Switzerland', away: 'Algeria', kickoff: '2026-07-03T16:00:00.000Z' },
+  { id: 3214, round: ROUND, group_name: 'R32', home: 'Australia', away: 'Egypt', kickoff: '2026-07-03T19:00:00.000Z' },
+  { id: 3215, round: ROUND, group_name: 'R32', home: 'Argentina', away: 'Cape Verde', kickoff: '2026-07-03T22:00:00.000Z' },
+  { id: 3216, round: ROUND, group_name: 'R32', home: 'Colombia', away: 'Ghana', kickoff: '2026-07-04T01:30:00.000Z' }
 ];
 
 async function findExisting(sb, match) {
   const { data, error } = await sb
     .from('matches')
     .select('id')
-    .eq('round', match.round)
-    .eq('home', match.home)
-    .eq('away', match.away)
+    .or(`id.eq.${match.id},and(round.eq.${match.round},home.eq.${match.home},away.eq.${match.away})`)
     .maybeSingle();
 
   if (error) throw error;
