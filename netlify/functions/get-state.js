@@ -1,5 +1,6 @@
 const { client, json } = require('./_supabase');
 const { scorePrediction } = require('./_scoring');
+const { normalizeKickoffs } = require('./_kuwait-kickoffs');
 
 exports.handler = async () => {
   try {
@@ -15,7 +16,7 @@ exports.handler = async () => {
       throw (matchesRes.error || playersRes.error || predictionsRes.error || bonusRes.error);
     }
 
-    const matches = matchesRes.data || [];
+    const matches = normalizeKickoffs(matchesRes.data || []).sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
     const players = playersRes.data || [];
     const predictions = predictionsRes.data || [];
     const bonusRows = bonusRes.data || [];
