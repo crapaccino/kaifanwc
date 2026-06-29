@@ -1,4 +1,5 @@
 const { client, json } = require('./_supabase');
+const { normalizeKickoffs } = require('./_kuwait-kickoffs');
 
 function predictedWinnerLabel(prediction, match) {
   if (prediction === 'home') return match.home;
@@ -43,7 +44,7 @@ exports.handler = async () => {
     const sb = client();
     const now = Date.now();
 
-    const { data: matches, error: mErr } = await sb
+    const { data, error: mErr } = await sb
       .from('matches')
       .select('*')
       .eq('is_active', true)
@@ -51,7 +52,8 @@ exports.handler = async () => {
 
     if (mErr) throw mErr;
 
-    const started = (matches || []).filter(m => new Date(m.kickoff).getTime() <= now);
+    const matches = normalizeKickoffs(data || []).sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
+    const started = matches.filter(m => new Date(m.kickoff).getTime() <= now);
     const latest = started[started.length - 1] || null;
 
     if (!latest) {
