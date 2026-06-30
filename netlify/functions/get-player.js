@@ -23,10 +23,15 @@ exports.handler = async (event) => {
     const predRes = await sb.from('predictions').select('*').eq('player_id', player.id);
     if (predRes.error) throw predRes.error;
 
-    const bonusRes = await sb.from('bonus_predictions').select('*').eq('player_id', player.id);
-    if (bonusRes.error) throw bonusRes.error;
+    let bonusPredictions = [];
+    try {
+      const bonusRes = await sb.from('bonus_predictions').select('*').eq('player_id', player.id);
+      if (!bonusRes.error) bonusPredictions = bonusRes.data || [];
+    } catch (_) {
+      bonusPredictions = [];
+    }
 
-    return json(200, { player, predictions: predRes.data || [], bonus_predictions: bonusRes.data || [] });
+    return json(200, { player, predictions: predRes.data || [], bonus_predictions: bonusPredictions });
   } catch (e) {
     return json(500, { error: e.message });
   }
