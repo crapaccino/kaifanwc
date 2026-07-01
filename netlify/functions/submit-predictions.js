@@ -1,7 +1,5 @@
 const { client, json } = require('./_supabase');
-
-const LOCK_OFFSET_MS = 0;
-const ROUND2_LATE_START_MS = Date.parse('2026-06-19T19:00:00.000Z');
+const { isRoundOpen, hasExactMatchSet } = require('./_rounds');
 
 function normalizeNickname(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -9,16 +7,6 @@ function normalizeNickname(value) {
 
 function isValidScore(value) {
   return Number.isInteger(value) && value >= 0 && value <= 20;
-}
-
-function isRound2(round) {
-  return /round\s*2/i.test(String(round || ''));
-}
-
-function openForThisSubmission(match, round) {
-  const kickoff = new Date(match.kickoff).getTime();
-  if (isRound2(round) && kickoff < ROUND2_LATE_START_MS) return false;
-  return kickoff - LOCK_OFFSET_MS > Date.now();
 }
 
 exports.handler = async (event) => {
@@ -34,6 +22,10 @@ exports.handler = async (event) => {
 
     const sb = client();
     const ids = [...new Set(predictions.map(p => p.match_id).filter(Boolean))];
+
+    if (ids.length !== predictions.length) {
+      return json(400, { error: 'Each match can only be predicted once.' });
+    }
 
     const { data: selectedMatches, error: mErr } = await sb
       .from('matches')
@@ -62,26 +54,25 @@ exports.handler = async (event) => {
 
     if (rErr) throw rErr;
 
-    const openMatches = roundMatches.filter(m => openForThisSubmission(m, round));
-    const openIds = openMatches.map(m => String(m.id));
+    const roundIds = roundMatches.map(m => String(m.id));
     const submittedIds = new Set(ids.map(String));
 
-    if (!openMatches.length) {
+    if (!isRoundOpen(roundMatches)) {
       return json(400, {
-        error: 'This round is locked. There are no remaining matches open for picks.'
+        error: 'This round is locked. Picks close at the first kickoff.'
       });
     }
 
-    const invalidMatch = [...submittedIds].find(id => !openIds.includes(id));
+    const invalidMatch = [...submittedIds].find(id => !roundIds.includes(id));
     if (invalidMatch) {
       return json(400, {
-        error: 'One or more selected matches is no longer open for picks.'
+        error: 'One or more selected matches does not belong to this round.'
       });
     }
 
-    if (submittedIds.size !== openIds.length || !openIds.every(id => submittedIds.has(id))) {
+    if (!hasExactMatchSet([...submittedIds], roundIds)) {
       return json(400, {
-        error: `Please predict every remaining open match in ${round} before locking in your picks.`
+        error: `Please predict every match in ${round} before the first kickoff.`
       });
     }
 
@@ -93,7 +84,7 @@ exports.handler = async (event) => {
 
     if (invalid) {
       return json(400, {
-        error: 'Please choose a winner/draw and enter both scores for every remaining match.'
+        error: 'Please choose a winner/draw and enter both scores for every match.'
       });
     }
 
@@ -122,13 +113,13 @@ exports.handler = async (event) => {
       .from('predictions')
       .select('id,match_id')
       .eq('player_id', player.id)
-      .in('match_id', openIds);
+      .in('match_id', roundIds);
 
     if (existingErr) throw existingErr;
 
     if (existingPredictions && existingPredictions.length > 0) {
       return json(400, {
-        error: `You have already locked in one or more remaining picks for ${round}. Picks are final once submitted.`
+        error: `You have already locked in one or more picks for ${round}. Picks are final once submitted.`
       });
     }
 
