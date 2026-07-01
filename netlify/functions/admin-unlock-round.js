@@ -1,4 +1,5 @@
 const { client, json, requireAdmin } = require('./_supabase');
+const { isRoundOpen } = require('./_rounds');
 
 function normalizeNickname(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -40,8 +41,7 @@ exports.handler = async (event) => {
       return json(404, { error: 'Round not found or has no active matches' });
     }
 
-    const deadline = new Date(roundMatches[0].kickoff).getTime();
-    if (!Number.isFinite(deadline) || Date.now() >= deadline) {
+    if (!isRoundOpen(roundMatches)) {
       return json(400, { error: 'This round has already started, so picks cannot be unlocked.' });
     }
 

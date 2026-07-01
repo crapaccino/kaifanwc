@@ -1,6 +1,7 @@
 let state={matches:[],leaderboard:[],live:null};
 let picks={};
 let activeTab=null;
+let pastRoundsOpen=false;
 let savedMatchIds=new Set();
 let currentNickname=localStorage.getItem('kaifanwc_name')||'';
 let nameLocked=localStorage.getItem('kaifanwc_name_locked')==='1';
@@ -131,7 +132,15 @@ async function api(path, opts={}){
   return j;
 }
 
-function allRoundNames(){return [...new Set(state.matches.map(m=>m.round))].sort((a,b)=>roundLockTime(a)-roundLockTime(b));}
+function roundMatches(round){return state.matches.filter(m=>m.round===round).sort((a,b)=>new Date(a.kickoff)-new Date(b.kickoff));}
+function roundLockTime(round){const games=roundMatches(round); return games.length?new Date(games[0].kickoff):null;}
+function allRoundNames(){
+  return [...new Set(state.matches.map(m=>m.round).filter(Boolean))].sort((a,b)=>{
+    const aTime=roundLockTime(a)?.getTime()??Number.MAX_SAFE_INTEGER;
+    const bTime=roundLockTime(b)?.getTime()??Number.MAX_SAFE_INTEGER;
+    return aTime-bTime||String(a).localeCompare(String(b));
+  });
+}
 function visibleRoundNames(){
   const rounds=allRoundNames();
   const now=Date.now();
@@ -146,9 +155,13 @@ function visibleRoundNames(){
   });
 }
 function roundNames(){return visibleRoundNames();}
+function pastRoundNames(){return allRoundNames().filter(round=>isRoundTimeLocked(round)||hasLockedRound(round));}
 function displayRoundName(r){return String(r||"").replace("Group Stage - ","").replace("Group Stage ","");}
-function roundMatches(round){return state.matches.filter(m=>m.round===round).sort((a,b)=>new Date(a.kickoff)-new Date(b.kickoff));}
-function roundLockTime(round){const games=roundMatches(round); return games.length?new Date(games[0].kickoff):null;}
+function matchStageLabel(m){
+  const group=String(m.group_name||'');
+  return group&&!/^(R(?:16|32)|QF|SF|F)$/i.test(group)?`Group ${group}`:displayRoundName(m.round);
+}
+function isKnockoutRound(round){return /(round of 32|round of 16|quarter|semi|final)/i.test(String(round||''));}
 function isRoundTimeLocked(round){const lock=roundLockTime(round); return lock ? Date.now()>=lock.getTime() : false;}
 function hasLockedRound(round){return roundMatches(round).some(m=>savedMatchIds.has(String(m.id)));}
 function hasAnyLockedPicks(){return savedMatchIds.size>0;}
@@ -185,20 +198,62 @@ async function setNameFromInput(){
 
 function renderTabs(active){
   activeTab=active;
-  const rounds=roundNames();
-  const roundButtons=rounds.map(r=>`<button class="${r===active?'active':''}" data-tab="${r}">${displayRoundName(r)}</button>`).join('');
+  const roundButtons=roundNames().map(r=>`<button class="${r===active?'active':''}" data-tab="${r}">${displayRoundName(r)}</button>`).join('');
+  const pastRounds=pastRoundNames();
+  const pastButtons=pastRounds.map(r=>`<button class="${r===active?'active':''}" data-past-round="${r}">• ${displayRoundName(r)}</button>`).join('');
+  const showPast=pastRoundsOpen||pastRounds.includes(active);
+  const pastMenu=pastRounds.length?`<button class="past-rounds-toggle">${showPast?'📂 Past Rounds ▲':'📂 Past Rounds ▼'}</button><div class="past-rounds-menu${showPast?' open':''}">${pastButtons}</div>`:'';
   const liveButton=hasLiveMatch()?`<button class="${active==='live'?'active':''}" data-tab="live">Live 🔴</button>`:'';
-  $('#roundTabs').innerHTML=roundButtons+liveButton+`<button class="${active==='leaderboard'?'active':''}" data-tab="leaderboard">Leaderboard</button>`;
+  $('#roundTabs').innerHTML=roundButtons+pastMenu+liveButton+`<button class="${active==='leaderboard'?'active':''}" data-tab="leaderboard">Leaderboard</button>`;
   document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>renderView(b.dataset.tab));
+  document.querySelectorAll('[data-past-round]').forEach(b=>b.onclick=()=>renderPastRound(b.dataset.pastRound));
+  const toggle=document.querySelector('.past-rounds-toggle');
+  if(toggle) toggle.onclick=()=>{pastRoundsOpen=!showPast;renderTabs(active);};
 }
 
 function renderLeaderboardView(){
   renderTabs('leaderboard');
+  const rounds=allRoundNames();
+  const roundHeaders=rounds.map(r=>`<th>${displayRoundName(r)} Picks</th>`).join('');
   const rows=state.leaderboard.map((p,i)=>`
-    <tr><td>${i+1}</td><td>${displayName(p.nickname)}</td><td><b>${p.points}</b></td><td>${p.predictions}</td></tr>
+    <tr><td>${i+1}</td><td>${displayName(p.nickname)}</td><td><b>${p.points}</b></td>${rounds.map(r=>`<td>${p.round_predictions?.[r]??0}</td>`).join('')}<td>${p.predictions}</td></tr>
   `).join('');
-  $('#matches').innerHTML=`<div class="leaderboard leaderboard-tab"><h2>Leaderboard</h2><table><thead><tr><th>#</th><th>Name</th><th>Pts</th><th>Picks</th></tr></thead><tbody>${rows||'<tr><td colspan="4">No players yet</td></tr>'}</tbody></table></div>`;
+  const columns=4+rounds.length;
+  $('#matches').innerHTML=`<div class="leaderboard leaderboard-tab"><h2>Leaderboard</h2><table><thead><tr><th>#</th><th>Name</th><th>Pts</th>${roundHeaders}<th>Total Picks</th></tr></thead><tbody>${rows||`<tr><td colspan="${columns}">No players yet</td></tr>`}</tbody></table></div>`;
   $('#submitBtn').style.display='none';
+}
+
+function predictionPoints(p,m){
+  const winner=actualWinnerKey(m);
+  if(!p||!winner) return null;
+  if(Number(p.home_score)===Number(m.home_score)&&Number(p.away_score)===Number(m.away_score)) return 5;
+  return p.predicted_winner===winner?3:0;
+}
+function predictionLabel(p,m){
+  if(!p) return 'No pick';
+  if(p.predicted_winner==='home') return m.home;
+  if(p.predicted_winner==='away') return m.away;
+  return 'Draw';
+}
+function renderPastRound(round){
+  pastRoundsOpen=true;
+  renderTabs(round);
+  $('#submitBtn').style.display='none';
+  const matches=roundMatches(round);
+  const finished=matches.filter(m=>actualWinnerKey(m));
+  const earned=finished.reduce((sum,m)=>sum+(predictionPoints(picks[m.id],m)||0),0);
+  const correct=finished.filter(m=>(predictionPoints(picks[m.id],m)||0)>0).length;
+  const grouped={};
+  matches.forEach(m=>{const day=fmtDay(m.kickoff);if(!grouped[day]) grouped[day]=[];grouped[day].push(m);});
+  const summary=`<div class="round-lock locked-notice"><b>${displayRoundName(round)} review 🔒</b><br><span class="small">${finished.length?`${correct}/${finished.length} results correct • ${earned} points earned so far.`:'This round is read-only. Results will appear here when available.'}</span></div>`;
+  const body=Object.entries(grouped).map(([day,games])=>`<div class="day-header">${day}</div>${games.map(m=>{
+    const p=picks[m.id];
+    const predictedScore=p?`${p.home_score} - ${p.away_score}`:'No pick';
+    const actual=m.home_score==null||m.away_score==null?'Not played yet':`Actual: ${m.home_score} - ${m.away_score}`;
+    const points=predictionPoints(p,m);
+    return `<div class="match"><div class="match-top">${teamBlock(m.home,'home')}<div class="result-score muted-score">${fmtTime(m.kickoff)}</div>${teamBlock(m.away,'away')}</div><div class="match-info"><div class="meta-row"><span>${matchStageLabel(m)}</span><span>${fmtTime(m.kickoff)} Kuwait</span></div></div><div class="notice"><b>${displayName(currentNickname||'You')} picked: ${predictionLabel(p,m)}</b><br><span class="small">Predicted score: ${predictedScore} • ${actual}</span>${points==null?'':`<br><span class="small">Points: <b>${points}</b></span>`}</div></div>`;
+  }).join('')}`).join('');
+  $('#matches').innerHTML=summary+(body||'<div class="notice">No matches found for this round.</div>');
 }
 
 function teamBlock(team,side){return `<div class="team ${side}"><span class="team-flag">${flagImg(team)}</span><span class="team-name">${teamName(team)}</span></div>`;}
@@ -212,7 +267,7 @@ function renderMatch(m){
 
   return `<div class="match">
     <div class="match-top">${teamBlock(m.home,'home')}${result}${teamBlock(m.away,'away')}</div>
-    <div class="match-info"><div class="meta-row"><span>Group ${m.group_name||''}</span><span>${fmtTime(m.kickoff)} Kuwait</span></div>${venue?`<div class="venue-line">📍 ${venue}</div>`:''}</div>
+    <div class="match-info"><div class="meta-row"><span>${matchStageLabel(m)}</span><span>${fmtTime(m.kickoff)} Kuwait</span></div>${venue?`<div class="venue-line">📍 ${venue}</div>`:''}</div>
     <div class="pick">${opts}</div>
     <div class="score"><input type="number" min="0" max="20" placeholder="${teamName(m.home)}" value="${p.home_score??''}" data-score="${m.id}:home"><span class="score-dash">-</span><input type="number" min="0" max="20" placeholder="${teamName(m.away)}" value="${p.away_score??''}" data-score="${m.id}:away"></div>
   </div>`;
@@ -276,7 +331,7 @@ function renderLiveView(){
     <div class="live-card">
       <div class="live-badge">LIVE / LATEST 🔴</div>
       <div class="match-top live-match-top">${teamBlock(m.home,'home')}<div class="result-score">${actual}</div>${teamBlock(m.away,'away')}</div>
-      <div class="match-info"><div class="meta-row"><span>Group ${m.group_name||''}</span><span>${fmtTime(m.kickoff)} Kuwait</span></div>${venue?`<div class="venue-line">📍 ${venue}</div>`:''}</div>
+      <div class="match-info"><div class="meta-row"><span>${matchStageLabel(m)}</span><span>${fmtTime(m.kickoff)} Kuwait</span></div>${venue?`<div class="venue-line">📍 ${venue}</div>`:''}</div>
     </div>
     ${crowd?`<div class="live-card crowd-card"><div class="crowd-label">👥 Crowd pick</div><h2>${crowd.label}</h2><p>${crowd.percent}% of players picked this outcome.</p></div>`:''}
     <div class="live-card">
@@ -311,7 +366,8 @@ function renderMatches(active=roundNames()[0]){
   $('#submitBtn').textContent='Lock in picks';
   const grouped={};
   matches.forEach(m=>{const day=fmtDay(m.kickoff); if(!grouped[day]) grouped[day]=[]; grouped[day].push(m);});
-  const lockNotice=lockTime?`<div class="round-lock open-notice">⏳ Predict every match in this round. Picks become final when you press Lock in picks. Deadline: ${fmtFull(lockTime)} Kuwait time.</div>`:'';
+  const knockoutRule=isKnockoutRound(active)?' 🏆 Knockout rule: predict the score at the final whistle, including extra time if played. If it is level after extra time, choose Draw. Penalty shootouts do not count.':'';
+  const lockNotice=lockTime?`<div class="round-lock open-notice">⏳ Predict every match in this round. Picks lock at the first kickoff: ${fmtFull(lockTime)} Kuwait time. Once submitted, picks are final.${knockoutRule}</div>`:'';
   const html=lockNotice+Object.entries(grouped).map(([day,games])=>`<div class="day-header">${day}</div>${games.map(m=>renderMatch(m)).join('')}`).join('');
   $('#matches').innerHTML=html||'<div class="notice">No matches in this round.</div>';
   document.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{const [id,v]=b.dataset.pick.split(':'); picks[id]={...(picks[id]||{}),predicted_winner:v}; renderMatches(active);});
@@ -321,6 +377,7 @@ function renderMatches(active=roundNames()[0]){
 function renderView(tab=roundNames()[0]){
   if(tab==='leaderboard') return renderLeaderboardView();
   if(tab==='live') return renderLiveView();
+  if(pastRoundNames().includes(tab)) return renderPastRound(tab);
   return renderMatches(tab);
 }
 
