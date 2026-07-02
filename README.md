@@ -52,6 +52,6 @@ Insert new rows into the `matches` table in Supabase.
 Existing predictions remain saved.
 
 ## Notes
-- Predictions automatically lock after kickoff.
+- Each round locks at its first kickoff.
 - Redeploying Netlify does not delete Supabase data.
 - If you rename teams or change match IDs after people predicted, avoid changing the match ID. The predictions are linked to `match_id`.

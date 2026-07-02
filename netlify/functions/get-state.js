@@ -22,11 +22,6 @@ exports.handler = async () => {
     const bonusRows = bonusRes.data || [];
 
     const matchMap = Object.fromEntries(matches.map(m => [m.id, m]));
-    const roundName = match => String(match?.round || '').toLowerCase();
-    const isRound2 = match => /round\s*2/.test(roundName(match));
-    const isRound3 = match => /round\s*3/.test(roundName(match));
-    const isRound32 = match => /round\s*of\s*32|round\s*32|r32/.test(roundName(match));
-
     const bonusByPlayer = {};
     bonusRows.forEach(b => {
       if (!bonusByPlayer[b.player_id]) bonusByPlayer[b.player_id] = {};
@@ -35,17 +30,20 @@ exports.handler = async () => {
 
     const leaderboard = players.map(p => {
       const mine = predictions.filter(x => x.player_id === p.id);
-      const round2_predictions = mine.filter(x => isRound2(matchMap[x.match_id])).length;
-      const round3_predictions = mine.filter(x => isRound3(matchMap[x.match_id])).length;
-      const r32_predictions = mine.filter(x => isRound32(matchMap[x.match_id])).length;
+      const round_predictions = mine.reduce((counts, prediction) => {
+        const round = matchMap[prediction.match_id]?.round;
+        if (round) counts[round] = (counts[round] || 0) + 1;
+        return counts;
+      }, {});
       return {
         player_id: p.id,
         nickname: p.nickname,
         predictions: mine.length,
-        round2_predictions,
-        round3_predictions,
-        r32_predictions,
-        r32_locked: r32_predictions > 0,
+        round_predictions,
+        round2_predictions: round_predictions['Group Stage - Round 2'] || 0,
+        round3_predictions: round_predictions['Group Stage - Round 3'] || 0,
+        r32_predictions: round_predictions['Round of 32'] || 0,
+        r32_locked: (round_predictions['Round of 32'] || 0) > 0,
         points: mine.reduce((sum, x) => sum + scorePrediction(x, matchMap[x.match_id] || {}), 0),
         bonus: bonusByPlayer[p.id] || {}
       };
