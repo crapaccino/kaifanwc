@@ -211,6 +211,39 @@ function renderTabs(active){
   if(toggle) toggle.onclick=()=>{pastRoundsOpen=!showPast;renderTabs(active);};
 }
 
+const BONUS_SHORT={
+  'France':['fr','FR'],'England':['gb-eng','ENG'],'Spain':['es','ESP'],'Argentina':['ar','ARG'],'Brazil':['br','BRA'],'Any Other Team':[null,'Other'],
+  'Kylian Mbappe':['fr','KM'],'Lamine Yamal':['es','LY'],'Harry Kane':['gb-eng','HK'],'Lionel Messi':['ar','LM'],'Michael Olise':['fr','MO'],'Any Other Player':[null,'Other'],
+  'Erling Haaland':['no','EH'],'Kai Havertz':['de','KH'],'Mike Maignan':['fr','MM'],'Emiliano Martinez':['ar','EM'],'Jordan Pickford':['gb-eng','JP'],
+  'Unai Simon':['es','US'],'Alisson Becker':['br','AB'],'Any Other Goalkeeper':[null,'Other']
+};
+function compactBonusPick(value){
+  const [code,label]=BONUS_SHORT[value]||[null,value||'-'];
+  return code?`<span class="bonus-compact-pick"><span class="pick-label-flag"><img class="team-flag-img" src="https://flagcdn.com/${code}.svg" alt="" loading="eager"></span><span>${label}</span></span>`:label;
+}
+function renderTournamentPredictions(){
+  const grouped={};
+  (state.bonus_predictions||[]).forEach(item=>{
+    if(!grouped[item.nickname]) grouped[item.nickname]={};
+    grouped[item.nickname][item.category]=item.pick;
+  });
+  const rows=Object.keys(grouped).sort().map((name,index)=>{
+    const picks=grouped[name];
+    return `<tr><td>${index+1}</td><td><b>${displayName(name)}</b></td><td>${compactBonusPick(picks.winner)}</td><td>${compactBonusPick(picks.potm)}</td><td>${compactBonusPick(picks.golden_boot)}</td><td>${compactBonusPick(picks.golden_glove)}</td></tr>`;
+  }).join('')||'<tr><td colspan="6">No bonus predictions locked yet.</td></tr>';
+  return `<div class="bonus-card bonus-board"><h2>Tournament Predictions</h2><p class="bonus-note">Locked bonus picks. Other = any unlisted team, player, or goalkeeper.</p><table><thead><tr><th>#</th><th>Name</th><th>Winner</th><th>POTM</th><th>Boot</th><th>Glove</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function openScoringModal(){
+  $('#scoringModal')?.remove();
+  const modal=document.createElement('div');
+  modal.id='scoringModal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:9999';
+  modal.innerHTML='<div style="background:white;max-width:520px;width:100%;border-radius:20px;padding:20px;max-height:85vh;overflow:auto"><h2>🏆 Kaifan WC Scoring</h2><h3>Match Predictions</h3><p>Exact score: <b>5 pts</b><br>Correct result: <b>3 pts</b><br>Wrong prediction: <b>0 pts</b></p><p><small>Exact score is worth 5 total points, not 5 + 3.</small></p><h3>Final Match</h3><p>Exact score: <b>10 pts</b><br>Correct winner: <b>4 pts</b></p><h3>Bonus Predictions</h3><p>World Cup Winner: <b>15 pts</b><br>Player of the Tournament: <b>10 pts</b><br>Golden Boot: <b>10 pts</b><br>Golden Glove: <b>8 pts</b></p><button id="closeScoreModal">Close</button></div>';
+  document.body.appendChild(modal);
+  $('#closeScoreModal').onclick=()=>modal.remove();
+  modal.onclick=event=>{if(event.target===modal) modal.remove();};
+}
+
 function renderLeaderboardView(){
   renderTabs('leaderboard');
   const rounds=allRoundNames();
@@ -219,7 +252,8 @@ function renderLeaderboardView(){
     <tr><td>${i+1}</td><td>${displayName(p.nickname)}</td><td><b>${p.points}</b></td>${rounds.map(r=>`<td>${p.round_predictions?.[r]??0}</td>`).join('')}<td>${p.predictions}</td></tr>
   `).join('');
   const columns=4+rounds.length;
-  $('#matches').innerHTML=`<div class="leaderboard leaderboard-tab"><h2>Leaderboard</h2><table><thead><tr><th>#</th><th>Name</th><th>Pts</th>${roundHeaders}<th>Total Picks</th></tr></thead><tbody>${rows||`<tr><td colspan="${columns}">No players yet</td></tr>`}</tbody></table></div>`;
+  $('#matches').innerHTML=`<div class="leaderboard leaderboard-tab"><h2>Leaderboard <button id="scoringInfoBtn" class="secondary" style="margin-left:10px">? Scoring</button></h2><table><thead><tr><th>#</th><th>Name</th><th>Pts</th>${roundHeaders}<th>Total Picks</th></tr></thead><tbody>${rows||`<tr><td colspan="${columns}">No players yet</td></tr>`}</tbody></table>${renderTournamentPredictions()}</div>`;
+  $('#scoringInfoBtn').onclick=openScoringModal;
   $('#submitBtn').style.display='none';
 }
 

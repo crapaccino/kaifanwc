@@ -17,7 +17,19 @@ const OFFICIAL_KICKOFFS_UTC = {
   'Argentina|Cape Verde': '2026-07-03T22:00:00Z',
   'Colombia|Ghana': '2026-07-04T01:30:00Z',
 
-  // Round of 16 and later. Kept here so future tabs also display Kuwait time correctly.
+  // Round of 16
+  'Canada|Morocco': '2026-07-04T17:00:00Z',
+  'France|Paraguay': '2026-07-04T21:00:00Z',
+  'Brazil|Norway': '2026-07-05T20:00:00Z',
+  'England|Mexico': '2026-07-06T00:00:00Z',
+  'Portugal|Spain': '2026-07-06T19:00:00Z',
+  'Belgium|United States': '2026-07-07T00:00:00Z',
+  'Argentina|Egypt': '2026-07-07T16:00:00Z',
+  'Switzerland|Winner of Colombia vs Ghana': '2026-07-07T20:00:00Z',
+  'Colombia|Switzerland': '2026-07-07T20:00:00Z',
+  'Ghana|Switzerland': '2026-07-07T20:00:00Z',
+
+  // Later rounds. Kept here so future tabs also display Kuwait time correctly.
   'Canada|TBD (Winner of 53452547)': '2026-07-04T17:00:00Z',
   'TBD (Winner of 53452541)|TBD (Winner of 53452543)': '2026-07-04T21:00:00Z',
   'Brazil|TBD (Winner of 53452561)': '2026-07-05T20:00:00Z',
