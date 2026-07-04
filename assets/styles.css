@@ -137,6 +137,16 @@ button.danger{background:#b42318;}
   .meta-row,.venue-line{font-size:12px;}
   .live-card{padding:14px;}
   .live-pick-row strong{font-size:17px;}
+  .leaderboard{padding:12px;}
+  .leaderboard .leaderboard-summary th,
+  .leaderboard .leaderboard-summary td{padding:10px 5px;font-size:12px;}
+  .leaderboard .leaderboard-summary th:nth-child(2),
+  .leaderboard .leaderboard-summary td:nth-child(2){font-size:13px;overflow-wrap:anywhere;}
+  .leaderboard .leaderboard-summary .round-picks-column{display:none;}
+  .leaderboard .leaderboard-summary th:first-child,
+  .leaderboard .leaderboard-summary td:first-child{width:24px;}
+  .leaderboard .leaderboard-summary th:last-child,
+  .leaderboard .leaderboard-summary td:last-child{text-align:center;white-space:nowrap;}
 }
 
 @media(min-width:700px){
