@@ -185,4 +185,15 @@ $('#saveMatch').onclick=async()=>{
   }
 };
 
+$('#seedRound16').onclick=async()=>{
+  try{
+    const last_winner=$('#round16LastWinner').value;
+    const result=await api('admin-seed-round16',{method:'POST',body:JSON.stringify({last_winner})});
+    $('#adminStatus').innerHTML=`<span class="ok">Loaded ${result.count} Round of 16 fixtures. Times will display in Kuwait time.</span>`;
+    await getState();
+  }catch(e){
+    $('#adminStatus').innerHTML=`<span class="bad">${e.message}</span>`;
+  }
+};
+
 getState();

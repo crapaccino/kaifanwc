@@ -43,6 +43,17 @@
         <div class="row"><input id="home" placeholder="Home team"><input id="away" placeholder="Away team"></div>
         <button id="saveMatch">Save match</button>
         <hr class="admin-separator">
+        <h2>Round of 16 fixtures</h2>
+        <p class="small">Official kickoff times are stored in UTC and displayed in Kuwait time. Enter the Colombia/Ghana winner once known, then load the fixtures.</p>
+        <div class="row">
+          <select id="round16LastWinner">
+            <option value="">Colombia/Ghana winner pending</option>
+            <option value="Colombia">Colombia</option>
+            <option value="Ghana">Ghana</option>
+          </select>
+          <button id="seedRound16" class="secondary">Load Round of 16</button>
+        </div>
+        <hr class="admin-separator">
         <h2>Matches & results</h2>
         <div id="adminMatches"></div>
       </section>
