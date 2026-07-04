@@ -247,12 +247,12 @@ function openScoringModal(){
 function renderLeaderboardView(){
   renderTabs('leaderboard');
   const rounds=allRoundNames();
-  const roundHeaders=rounds.map(r=>`<th>${displayRoundName(r)} Picks</th>`).join('');
+  const roundHeaders=rounds.map(r=>`<th class="round-picks-column">${displayRoundName(r)} Picks</th>`).join('');
   const rows=state.leaderboard.map((p,i)=>`
-    <tr><td>${i+1}</td><td>${displayName(p.nickname)}</td><td><b>${p.points}</b></td>${rounds.map(r=>`<td>${p.round_predictions?.[r]??0}</td>`).join('')}<td>${p.predictions}</td></tr>
+    <tr><td>${i+1}</td><td>${displayName(p.nickname)}</td><td><b>${p.points}</b></td>${rounds.map(r=>`<td class="round-picks-column">${p.round_predictions?.[r]??0}</td>`).join('')}<td>${p.predictions}</td></tr>
   `).join('');
   const columns=4+rounds.length;
-  $('#matches').innerHTML=`<div class="leaderboard leaderboard-tab"><h2>Leaderboard <button id="scoringInfoBtn" class="secondary" style="margin-left:10px">? Scoring</button></h2><table><thead><tr><th>#</th><th>Name</th><th>Pts</th>${roundHeaders}<th>Total Picks</th></tr></thead><tbody>${rows||`<tr><td colspan="${columns}">No players yet</td></tr>`}</tbody></table>${renderTournamentPredictions()}</div>`;
+  $('#matches').innerHTML=`<div class="leaderboard leaderboard-tab"><h2>Leaderboard <button id="scoringInfoBtn" class="secondary" style="margin-left:10px">? Scoring</button></h2><table class="leaderboard-summary"><thead><tr><th>#</th><th>Name</th><th>Pts</th>${roundHeaders}<th>Total Picks</th></tr></thead><tbody>${rows||`<tr><td colspan="${columns}">No players yet</td></tr>`}</tbody></table>${renderTournamentPredictions()}</div>`;
   $('#scoringInfoBtn').onclick=openScoringModal;
   $('#submitBtn').style.display='none';
 }
