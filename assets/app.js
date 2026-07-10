@@ -133,6 +133,10 @@ async function api(path, opts={}){
 }
 
 function roundMatches(round){return state.matches.filter(m=>m.round===round).sort((a,b)=>new Date(a.kickoff)-new Date(b.kickoff));}
+function openUnsavedRoundMatches(round){
+  const now=Date.now();
+  return roundMatches(round).filter(m=>new Date(m.kickoff).getTime()>now&&!savedMatchIds.has(String(m.id)));
+}
 function roundLockTime(round){const games=roundMatches(round); return games.length?new Date(games[0].kickoff):null;}
 function allRoundNames(){
   return [...new Set(state.matches.map(m=>m.round).filter(Boolean))].sort((a,b)=>{
@@ -145,17 +149,14 @@ function visibleRoundNames(){
   const rounds=allRoundNames();
   const now=Date.now();
   return rounds.filter((round,index)=>{
-    const currentStart=roundLockTime(round);
-    const isTimeClosed=currentStart && now>=currentStart.getTime();
-    const isSubmittedClosed=hasLockedRound(round);
-    if(isTimeClosed || isSubmittedClosed) return false;
+    if(!openUnsavedRoundMatches(round).length) return false;
     if(index===0) return true;
     const previousStart=roundLockTime(rounds[index-1]);
     return previousStart && now>=previousStart.getTime();
   });
 }
 function roundNames(){return visibleRoundNames();}
-function pastRoundNames(){return allRoundNames().filter(round=>isRoundTimeLocked(round)||hasLockedRound(round));}
+function pastRoundNames(){return allRoundNames().filter(round=>isRoundTimeLocked(round)||hasAnySavedInRound(round));}
 function displayRoundName(r){return String(r||"").replace("Group Stage - ","").replace("Group Stage ","");}
 function matchStageLabel(m){
   const group=String(m.group_name||'');
@@ -163,7 +164,8 @@ function matchStageLabel(m){
 }
 function isKnockoutRound(round){return /(round of 32|round of 16|quarter|semi|final)/i.test(String(round||''));}
 function isRoundTimeLocked(round){const lock=roundLockTime(round); return lock ? Date.now()>=lock.getTime() : false;}
-function hasLockedRound(round){return roundMatches(round).some(m=>savedMatchIds.has(String(m.id)));}
+function hasAnySavedInRound(round){return roundMatches(round).some(m=>savedMatchIds.has(String(m.id)));}
+function hasLockedRound(round){return !openUnsavedRoundMatches(round).length && hasAnySavedInRound(round);}
 function hasAnyLockedPicks(){return savedMatchIds.size>0;}
 function hasLiveMatch(){return !!(state.live && state.live.match);}
 
@@ -393,15 +395,15 @@ function renderMatches(active=roundNames()[0]){
   }
   if(!openRounds.includes(active)) active=openRounds[0];
   renderTabs(active);
-  const matches=roundMatches(active);
-  const lockTime=roundLockTime(active);
+  const matches=openUnsavedRoundMatches(active);
+  const lockTime=matches.length?new Date(matches[0].kickoff):null;
   $('#submitBtn').style.display='block';
   $('#submitBtn').disabled=false;
   $('#submitBtn').textContent='Lock in picks';
   const grouped={};
   matches.forEach(m=>{const day=fmtDay(m.kickoff); if(!grouped[day]) grouped[day]=[]; grouped[day].push(m);});
   const knockoutRule=isKnockoutRound(active)?' 🏆 Knockout rule: predict the score at the final whistle, including extra time if played. If it is level after extra time, choose Draw. Penalty shootouts do not count.':'';
-  const lockNotice=lockTime?`<div class="round-lock open-notice">⏳ Predict every match in this round. Picks lock at the first kickoff: ${fmtFull(lockTime)} Kuwait time. Once submitted, picks are final.${knockoutRule}</div>`:'';
+  const lockNotice=lockTime?`<div class="round-lock open-notice">⏳ Predict every remaining open match in this round. Each game locks at kickoff. Next deadline: ${fmtFull(lockTime)} Kuwait time. Once submitted, picks are final.${knockoutRule}</div>`:'';
   const html=lockNotice+Object.entries(grouped).map(([day,games])=>`<div class="day-header">${day}</div>${games.map(m=>renderMatch(m)).join('')}`).join('');
   $('#matches').innerHTML=html||'<div class="notice">No matches in this round.</div>';
   document.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{const [id,v]=b.dataset.pick.split(':'); picks[id]={...(picks[id]||{}),predicted_winner:v}; renderMatches(active);});
@@ -471,11 +473,10 @@ $('#submitBtn').onclick=async()=>{
     if(!nickname) throw new Error('Enter your name first.');
     if(!activeTab||activeTab==='leaderboard'||activeTab==='live') throw new Error('Choose a round first.');
     if(!roundNames().includes(activeTab)) throw new Error('This round is not open yet.');
-    if(hasLockedRound(activeTab)) throw new Error('You have already locked in this round.');
-    if(isRoundTimeLocked(activeTab)) throw new Error('This round is already locked.');
-    const currentMatches=roundMatches(activeTab);
+    const currentMatches=openUnsavedRoundMatches(activeTab);
+    if(!currentMatches.length) throw new Error('There are no remaining open matches in this round.');
     const missing=currentMatches.find(m=>{const p=picks[m.id]||{}; return !p.predicted_winner||!Number.isInteger(p.home_score)||!Number.isInteger(p.away_score);});
-    if(missing) throw new Error('Please predict the winner/draw and both scores for every match in this round before locking in.');
+    if(missing) throw new Error('Please predict the winner/draw and both scores for every remaining open match in this round before locking in.');
     const predictions=currentMatches.map(m=>{const p=picks[m.id]; return {match_id:m.id,predicted_winner:p.predicted_winner,home_score:p.home_score,away_score:p.away_score};});
     const j=await api('submit-predictions',{method:'POST',body:JSON.stringify({nickname,predictions})});
     predictions.forEach(p=>savedMatchIds.add(String(p.match_id)));
@@ -491,3 +492,4 @@ $('#submitBtn').onclick=async()=>{
 };
 
 load();
+

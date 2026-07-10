@@ -1,5 +1,5 @@
 const { client, json } = require('./_supabase');
-const { isRoundOpen, hasExactMatchSet } = require('./_rounds');
+const { hasExactMatchSet } = require('./_rounds');
 
 function normalizeNickname(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -54,25 +54,26 @@ exports.handler = async (event) => {
 
     if (rErr) throw rErr;
 
-    const roundIds = roundMatches.map(m => String(m.id));
+    const openMatches = roundMatches.filter(m => new Date(m.kickoff).getTime() > Date.now());
+    const openIds = openMatches.map(m => String(m.id));
     const submittedIds = new Set(ids.map(String));
 
-    if (!isRoundOpen(roundMatches)) {
+    if (!openIds.length) {
       return json(400, {
-        error: 'This round is locked. Picks close at the first kickoff.'
+        error: 'This round is locked. There are no matches left open for picks.'
       });
     }
 
-    const invalidMatch = [...submittedIds].find(id => !roundIds.includes(id));
+    const invalidMatch = [...submittedIds].find(id => !openIds.includes(id));
     if (invalidMatch) {
       return json(400, {
-        error: 'One or more selected matches does not belong to this round.'
+        error: 'One or more selected matches has already kicked off or does not belong to this round.'
       });
     }
 
-    if (!hasExactMatchSet([...submittedIds], roundIds)) {
+    if (!hasExactMatchSet([...submittedIds], openIds)) {
       return json(400, {
-        error: `Please predict every match in ${round} before the first kickoff.`
+        error: `Please predict every remaining open match in ${round} before locking in.`
       });
     }
 
@@ -113,7 +114,7 @@ exports.handler = async (event) => {
       .from('predictions')
       .select('id,match_id')
       .eq('player_id', player.id)
-      .in('match_id', roundIds);
+      .in('match_id', openIds);
 
     if (existingErr) throw existingErr;
 
