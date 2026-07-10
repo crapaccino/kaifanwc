@@ -156,7 +156,7 @@ function visibleRoundNames(){
   });
 }
 function roundNames(){return visibleRoundNames();}
-function pastRoundNames(){return allRoundNames().filter(round=>isRoundTimeLocked(round)||hasAnySavedInRound(round));}
+function pastRoundNames(){return allRoundNames().filter(round=>!roundNames().includes(round)&&(isRoundTimeLocked(round)||hasAnySavedInRound(round)));}
 function displayRoundName(r){return String(r||"").replace("Group Stage - ","").replace("Group Stage ","");}
 function matchStageLabel(m){
   const group=String(m.group_name||'');
@@ -413,6 +413,7 @@ function renderMatches(active=roundNames()[0]){
 function renderView(tab=roundNames()[0]){
   if(tab==='leaderboard') return renderLeaderboardView();
   if(tab==='live') return renderLiveView();
+  if(roundNames().includes(tab)) return renderMatches(tab);
   if(pastRoundNames().includes(tab)) return renderPastRound(tab);
   return renderMatches(tab);
 }
