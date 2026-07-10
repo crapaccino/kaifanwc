@@ -2,23 +2,37 @@ const { client, json } = require('./_supabase');
 const { scorePrediction } = require('./_scoring');
 const { normalizeKickoffs } = require('./_kuwait-kickoffs');
 
+async function fetchAll(queryFactory, pageSize = 1000) {
+  const rows = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await queryFactory()
+      .range(from, from + pageSize - 1);
+
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+  }
+
+  return rows;
+}
+
 exports.handler = async () => {
   try {
     const sb = client();
-    const [matchesRes, playersRes, predictionsRes, bonusRes] = await Promise.all([
+    const [matchesRes, playersRes, predictions, bonusRes] = await Promise.all([
       sb.from('matches').select('*').eq('is_active', true).order('kickoff', { ascending: true }),
       sb.from('players').select('*').order('nickname'),
-      sb.from('predictions').select('*'),
+      fetchAll(() => sb.from('predictions').select('*').order('created_at', { ascending: true })),
       sb.from('bonus_predictions').select('*')
     ]);
 
-    if (matchesRes.error || playersRes.error || predictionsRes.error || bonusRes.error) {
-      throw (matchesRes.error || playersRes.error || predictionsRes.error || bonusRes.error);
+    if (matchesRes.error || playersRes.error || bonusRes.error) {
+      throw (matchesRes.error || playersRes.error || bonusRes.error);
     }
 
     const matches = normalizeKickoffs(matchesRes.data || []).sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
     const players = playersRes.data || [];
-    const predictions = predictionsRes.data || [];
     const bonusRows = bonusRes.data || [];
 
     const matchMap = Object.fromEntries(matches.map(m => [m.id, m]));
