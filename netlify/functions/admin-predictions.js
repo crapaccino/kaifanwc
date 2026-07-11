@@ -1,6 +1,21 @@
 const { client, json, requireAdmin } = require('./_supabase');
 const { scorePrediction } = require('./_scoring');
 
+async function fetchAll(queryFactory, pageSize = 1000) {
+  const rows = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await queryFactory()
+      .range(from, from + pageSize - 1);
+
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+  }
+
+  return rows;
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') return json(405, { error: 'GET only' });
 
@@ -8,19 +23,18 @@ exports.handler = async (event) => {
     requireAdmin(event);
     const sb = client();
 
-    const [matchesRes, playersRes, predictionsRes] = await Promise.all([
+    const [matchesRes, playersRes, predictions] = await Promise.all([
       sb.from('matches').select('*').eq('is_active', true).order('kickoff', { ascending: true }),
       sb.from('players').select('*').order('nickname'),
-      sb.from('predictions').select('*')
+      fetchAll(() => sb.from('predictions').select('*').order('created_at', { ascending: true }))
     ]);
 
-    if (matchesRes.error || playersRes.error || predictionsRes.error) {
-      throw (matchesRes.error || playersRes.error || predictionsRes.error);
+    if (matchesRes.error || playersRes.error) {
+      throw (matchesRes.error || playersRes.error);
     }
 
     const matches = matchesRes.data || [];
     const players = playersRes.data || [];
-    const predictions = predictionsRes.data || [];
 
     const matchMap = Object.fromEntries(matches.map(m => [m.id, m]));
     const playerMap = Object.fromEntries(players.map(p => [p.id, p]));
