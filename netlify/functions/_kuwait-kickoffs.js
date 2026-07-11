@@ -29,6 +29,12 @@ const OFFICIAL_KICKOFFS_UTC = {
   'Colombia|Switzerland': '2026-07-07T20:00:00Z',
   'Ghana|Switzerland': '2026-07-07T20:00:00Z',
 
+  // Quarter-finals
+  'France|Morocco': '2026-07-09T20:00:00Z',
+  'Belgium|Spain': '2026-07-10T19:00:00Z',
+  'England|Norway': '2026-07-11T21:00:00Z',
+  'Argentina|Switzerland': '2026-07-12T01:00:00Z',
+
   // Later rounds. Kept here so future tabs also display Kuwait time correctly.
   'Canada|TBD (Winner of 53452547)': '2026-07-04T17:00:00Z',
   'TBD (Winner of 53452541)|TBD (Winner of 53452543)': '2026-07-04T21:00:00Z',

@@ -1,5 +1,6 @@
 const { client, json } = require('./_supabase');
 const { hasExactMatchSet } = require('./_rounds');
+const { normalizeKickoffs } = require('./_kuwait-kickoffs');
 
 function normalizeNickname(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -27,13 +28,14 @@ exports.handler = async (event) => {
       return json(400, { error: 'Each match can only be predicted once.' });
     }
 
-    const { data: selectedMatches, error: mErr } = await sb
+    const { data: rawSelectedMatches, error: mErr } = await sb
       .from('matches')
-      .select('id,round,kickoff')
+      .select('id,round,home,away,kickoff')
       .in('id', ids)
       .eq('is_active', true);
 
     if (mErr) throw mErr;
+    const selectedMatches = normalizeKickoffs(rawSelectedMatches || []);
     if (!selectedMatches || selectedMatches.length !== ids.length) {
       return json(400, { error: 'One or more selected matches could not be found.' });
     }
@@ -45,14 +47,16 @@ exports.handler = async (event) => {
 
     const round = rounds[0];
 
-    const { data: roundMatches, error: rErr } = await sb
+    const { data: rawRoundMatches, error: rErr } = await sb
       .from('matches')
-      .select('id,round,kickoff')
+      .select('id,round,home,away,kickoff')
       .eq('round', round)
       .eq('is_active', true)
       .order('kickoff', { ascending: true });
 
     if (rErr) throw rErr;
+    const roundMatches = normalizeKickoffs(rawRoundMatches || [])
+      .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
 
     const openMatches = roundMatches.filter(m => new Date(m.kickoff).getTime() > Date.now());
     const openIds = openMatches.map(m => String(m.id));
