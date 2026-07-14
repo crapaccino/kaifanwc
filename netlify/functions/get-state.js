@@ -1,6 +1,24 @@
 const { client, json } = require('./_supabase');
 const { scorePrediction } = require('./_scoring');
 const { normalizeKickoffs } = require('./_kuwait-kickoffs');
+const { semifinalFixtures } = require('./_semifinal-fixtures');
+
+async function ensureSemifinalFixtures(sb) {
+  const fixtures = semifinalFixtures();
+  const ids = fixtures.map(match => match.id);
+  const { data, error } = await sb.from('matches').select('id').in('id', ids);
+  if (error) throw error;
+
+  const existingIds = new Set((data || []).map(match => String(match.id)));
+  const missing = fixtures
+    .filter(match => !existingIds.has(String(match.id)))
+    .map(match => ({ ...match, home_score: null, away_score: null }));
+
+  if (missing.length) {
+    const { error: insertError } = await sb.from('matches').insert(missing);
+    if (insertError) throw insertError;
+  }
+}
 
 async function fetchAll(queryFactory, pageSize = 1000) {
   const rows = [];
@@ -20,6 +38,7 @@ async function fetchAll(queryFactory, pageSize = 1000) {
 exports.handler = async () => {
   try {
     const sb = client();
+    await ensureSemifinalFixtures(sb);
     const [matchesRes, playersRes, predictions, bonusRes] = await Promise.all([
       sb.from('matches').select('*').eq('is_active', true).order('kickoff', { ascending: true }),
       sb.from('players').select('*').order('nickname'),
