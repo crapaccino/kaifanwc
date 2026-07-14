@@ -196,4 +196,14 @@ $('#seedRound16').onclick=async()=>{
   }
 };
 
+$('#seedSemiFinals').onclick=async()=>{
+  try{
+    const result=await api('admin-seed-semi-finals',{method:'POST'});
+    $('#adminStatus').innerHTML=`<span class="ok">Loaded ${result.count} Semi-final fixtures. Both kickoffs display at 22:00 Kuwait time.</span>`;
+    await getState();
+  }catch(e){
+    $('#adminStatus').innerHTML=`<span class="bad">${e.message}</span>`;
+  }
+};
+
 getState();

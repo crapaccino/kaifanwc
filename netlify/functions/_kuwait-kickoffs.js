@@ -35,6 +35,10 @@ const OFFICIAL_KICKOFFS_UTC = {
   'England|Norway': '2026-07-11T21:00:00Z',
   'Argentina|Switzerland': '2026-07-12T01:00:00Z',
 
+  // Semi-finals
+  'France|Spain': '2026-07-14T19:00:00Z',
+  'Argentina|England': '2026-07-15T19:00:00Z',
+
   // Later rounds. Kept here so future tabs also display Kuwait time correctly.
   'Canada|TBD (Winner of 53452547)': '2026-07-04T17:00:00Z',
   'TBD (Winner of 53452541)|TBD (Winner of 53452543)': '2026-07-04T21:00:00Z',
