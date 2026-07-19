@@ -206,4 +206,14 @@ $('#seedSemiFinals').onclick=async()=>{
   }
 };
 
+$('#seedFinal').onclick=async()=>{
+  try{
+    const result=await api('admin-seed-final',{method:'POST'});
+    $('#adminStatus').innerHTML=`<span class="ok">Loaded ${result.fixture.home} vs ${result.fixture.away}. The final displays at 22:00 Kuwait time.</span>`;
+    await getState();
+  }catch(e){
+    $('#adminStatus').innerHTML=`<span class="bad">${e.message}</span>`;
+  }
+};
+
 getState();

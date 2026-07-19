@@ -107,7 +107,8 @@ const VENUES={
   "Colombia|Portugal":"NRG Stadium, Houston",
   "DR Congo|Uzbekistan":"Estadio Akron, Guadalajara",
   "Argentina|Jordan":"Arrowhead Stadium, Kansas City",
-  "Algeria|Austria":"Levi’s Stadium, San Francisco Bay Area"
+  "Algeria|Austria":"Levi’s Stadium, San Francisco Bay Area",
+  "Argentina|Spain":"MetLife Stadium, New York/New Jersey"
 };
 
 function flagCode(team){return FLAG_CODES[team] || '';} 
@@ -493,4 +494,3 @@ $('#submitBtn').onclick=async()=>{
 };
 
 load();
-

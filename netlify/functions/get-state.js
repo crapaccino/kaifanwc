@@ -1,6 +1,7 @@
 const { client, json } = require('./_supabase');
 const { scorePrediction } = require('./_scoring');
 const { normalizeKickoffs } = require('./_kuwait-kickoffs');
+const { bonusResultsFromEnv, scoreBonusPicks } = require('./_bonus-scoring');
 
 async function fetchAll(queryFactory, pageSize = 1000) {
   const rows = [];
@@ -34,6 +35,7 @@ exports.handler = async () => {
     const matches = normalizeKickoffs(matchesRes.data || []).sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
     const players = playersRes.data || [];
     const bonusRows = bonusRes.data || [];
+    const bonusResults = bonusResultsFromEnv();
 
     const matchMap = Object.fromEntries(matches.map(m => [m.id, m]));
     const bonusByPlayer = {};
@@ -49,6 +51,8 @@ exports.handler = async () => {
         if (round) counts[round] = (counts[round] || 0) + 1;
         return counts;
       }, {});
+      const matchPoints = mine.reduce((sum, x) => sum + scorePrediction(x, matchMap[x.match_id] || {}), 0);
+      const bonusPoints = scoreBonusPicks(bonusByPlayer[p.id] || {}, bonusResults);
       return {
         player_id: p.id,
         nickname: p.nickname,
@@ -58,7 +62,9 @@ exports.handler = async () => {
         round3_predictions: round_predictions['Group Stage - Round 3'] || 0,
         r32_predictions: round_predictions['Round of 32'] || 0,
         r32_locked: (round_predictions['Round of 32'] || 0) > 0,
-        points: mine.reduce((sum, x) => sum + scorePrediction(x, matchMap[x.match_id] || {}), 0),
+        points: matchPoints + bonusPoints,
+        match_points: matchPoints,
+        bonus_points: bonusPoints,
         bonus: bonusByPlayer[p.id] || {}
       };
     }).sort((a,b)=>b.points-a.points || b.predictions-a.predictions || a.nickname.localeCompare(b.nickname));
@@ -68,7 +74,7 @@ exports.handler = async () => {
       return { nickname: player ? player.nickname : '', category: b.category, pick: b.pick, created_at: b.created_at };
     });
 
-    return json(200, { matches, leaderboard, bonus_predictions });
+    return json(200, { matches, leaderboard, bonus_predictions, bonus_results: bonusResults });
   } catch (e) {
     return json(500, { error: e.message });
   }

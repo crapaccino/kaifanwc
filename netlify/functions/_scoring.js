@@ -12,8 +12,9 @@ function scorePrediction(pred, match) {
   const exactScore = Number(pred.home_score) === Number(match.home_score) &&
     Number(pred.away_score) === Number(match.away_score);
 
-  if (exactScore) return 5;
-  return pred.predicted_winner === actual ? 3 : 0;
+  const isFinal = String(match.round || '').trim().toLowerCase() === 'final';
+  if (exactScore) return isFinal ? 10 : 5;
+  return pred.predicted_winner === actual ? (isFinal ? 4 : 3) : 0;
 }
 
 module.exports = { scorePrediction, winnerOfScore };

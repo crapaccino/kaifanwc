@@ -45,6 +45,11 @@ You have two options:
 
 ### Option A: Use the admin page
 Open `/admin.html`, enter the admin password, and add Round 3 / knockout matches.
+
+Tournament bonus results are applied automatically to leaderboard totals when the deployment
+environment variables `BONUS_WINNER`, `BONUS_POTM`, `BONUS_GOLDEN_BOOT`, and
+`BONUS_GOLDEN_GLOVE` are set to the official result names. Unlisted winners correctly score
+the corresponding “Any Other” pick.
 Existing predictions remain saved.
 
 ### Option B: Update Supabase directly
