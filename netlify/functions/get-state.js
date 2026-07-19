@@ -2,6 +2,7 @@ const { client, json } = require('./_supabase');
 const { scorePrediction } = require('./_scoring');
 const { normalizeKickoffs } = require('./_kuwait-kickoffs');
 const { bonusResultsFromEnv, scoreBonusPicks } = require('./_bonus-scoring');
+const { finalFixture } = require('./_final-fixture');
 
 async function fetchAll(queryFactory, pageSize = 1000) {
   const rows = [];
@@ -21,6 +22,11 @@ async function fetchAll(queryFactory, pageSize = 1000) {
 exports.handler = async () => {
   try {
     const sb = client();
+    const { error: finalError } = await sb
+      .from('matches')
+      .upsert(finalFixture(), { onConflict: 'id' });
+    if (finalError) throw finalError;
+
     const [matchesRes, playersRes, predictions, bonusRes] = await Promise.all([
       sb.from('matches').select('*').eq('is_active', true).order('kickoff', { ascending: true }),
       sb.from('players').select('*').order('nickname'),
