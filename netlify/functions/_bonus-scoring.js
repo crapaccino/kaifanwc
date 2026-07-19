@@ -25,10 +25,10 @@ function clean(value) {
 
 function bonusResultsFromEnv(env = process.env) {
   return {
-    winner: env.BONUS_WINNER || '',
-    potm: env.BONUS_POTM || '',
-    golden_boot: env.BONUS_GOLDEN_BOOT || '',
-    golden_glove: env.BONUS_GOLDEN_GLOVE || ''
+    winner: env.BONUS_WINNER || 'Spain',
+    potm: env.BONUS_POTM || 'Rodri',
+    golden_boot: env.BONUS_GOLDEN_BOOT || 'Kylian Mbappe',
+    golden_glove: env.BONUS_GOLDEN_GLOVE || 'Unai Simon'
   };
 }
 

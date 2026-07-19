@@ -8,7 +8,7 @@ exports.handler = async (event) => {
     requireAdmin(event);
     const sb = client();
     const fixture = finalFixture();
-    const payload = { ...fixture, home_score: null, away_score: null };
+    const payload = { ...fixture };
     const { data: existing, error: findError } = await sb
       .from('matches')
       .select('id')

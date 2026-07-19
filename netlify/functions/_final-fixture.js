@@ -7,6 +7,8 @@ const FINAL_FIXTURE = {
   home: 'Spain',
   away: 'Argentina',
   kickoff: '2026-07-19T19:00:00.000Z',
+  home_score: 1,
+  away_score: 0,
   is_active: true
 };
 
